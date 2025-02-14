@@ -1,0 +1,12 @@
+[package]
+name = "qass"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Offline password manager"
+repository = "https://github.com/boralg/qass"
+readme = "README.md"
+keywords = []
+categories = []
+
+[dependencies]
