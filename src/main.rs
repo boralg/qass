@@ -107,6 +107,7 @@ fn add(service: String, username: String) -> anyhow::Result<()> {
 
     save_to_file(&credentials_path, &credentials)?;
     save_to_file(&salts_path, &salts)?;
+    
     Ok(())
 }
 
