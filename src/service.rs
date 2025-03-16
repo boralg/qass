@@ -1,6 +1,12 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
+#[derive(Serialize, Deserialize)]
+pub struct SaltEntry {
+    pub salt: String,
+    pub nonce: String,
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ServiceEntry {
     pub username: String,
