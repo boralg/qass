@@ -32,3 +32,16 @@ pub fn encrypt_password(password: &str, key: &[u8; 32]) -> anyhow::Result<(Vec<u
 
     Ok((nonce.to_vec(), ciphertext))
 }
+
+pub fn decrypt_password(ciphertext: &[u8], key: &[u8; 32], nonce: &[u8]) -> anyhow::Result<String> {
+    let cipher = Aes256GcmSiv::new_from_slice(key)
+        .map_err(|_| anyhow!("Failed to initialize cipher from derived key"))?;
+
+    let nonce = aes_gcm_siv::Nonce::from_slice(nonce);
+
+    let plaintext = cipher
+        .decrypt(nonce, ciphertext)
+        .map_err(|_| anyhow!("Failed to decrypt password"))?;
+
+    String::from_utf8(plaintext).map_err(|_| anyhow!("Password is not valid UTF-8"))
+}
