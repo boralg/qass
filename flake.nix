@@ -29,6 +29,11 @@
               system = "x86_64-unknown-linux-gnu";
               arch = "x86_64-linux";
               inherit toolchainPackages;
+              depsBuild = with pkgs; [
+                pkg-config
+                xorg.libX11
+                xdotool
+              ];
             }
           ];
         tomersLib = tomers.libFor system targetPlatforms;
