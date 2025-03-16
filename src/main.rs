@@ -9,12 +9,15 @@ use clap::{Parser, Subcommand};
 use directories::UserDirs;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
+use service::ServiceEntry;
 use std::{
     collections::HashMap,
     fs::{self, File},
     path::PathBuf,
 };
 use zeroize::Zeroizing;
+
+pub mod service;
 
 #[derive(Parser)]
 #[command(name = "qass")]
@@ -34,12 +37,6 @@ enum Commands {
 struct SaltEntry {
     salt: String,
     nonce: String,
-}
-
-#[derive(Serialize, Deserialize)]
-struct ServiceEntry {
-    username: String,
-    password: String,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -95,6 +92,7 @@ fn add(service: String, username: String) -> anyhow::Result<()> {
         ServiceEntry {
             username,
             password: b64.encode(ciphertext),
+            extra_fields: vec![],
         },
     );
     salts.insert(
@@ -107,7 +105,7 @@ fn add(service: String, username: String) -> anyhow::Result<()> {
 
     save_to_file(&credentials_path, &credentials)?;
     save_to_file(&salts_path, &salts)?;
-    
+
     Ok(())
 }
 
