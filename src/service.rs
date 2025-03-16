@@ -1,87 +1,115 @@
-use serde::{Serialize, Deserialize, Serializer, Deserializer};
-use serde::ser::SerializeMap;
-use serde::de::{self, MapAccess, Visitor};
-use std::fmt;
-use std::marker::PhantomData;
+use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ServiceEntry {
     pub username: String,
     pub password: String,
-    pub extra_fields: Vec<(String, String)>,
+    #[serde(flatten)]
+    pub extra_fields: IndexMap<String, String>,
 }
 
-impl<'de> Deserialize<'de> for ServiceEntry {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct ServiceEntryVisitor(PhantomData<ServiceEntry>);
-        
-        impl<'de> Visitor<'de> for ServiceEntryVisitor {
-            type Value = ServiceEntry;
-            
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("a map containing at least 'username' and 'password' fields")
-            }
-            
-            fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
-            where
-                M: MapAccess<'de>,
-            {
-                let mut username = None;
-                let mut password = None;
-                let mut extra_fields = Vec::new();
-                
-                while let Some(key) = map.next_key::<String>()? {
-                    match key.as_str() {
-                        "username" => {
-                            if username.is_some() {
-                                return Err(de::Error::duplicate_field("username"));
-                            }
-                            username = Some(map.next_value()?);
-                        }
-                        "password" => {
-                            if password.is_some() {
-                                return Err(de::Error::duplicate_field("password"));
-                            }
-                            password = Some(map.next_value()?);
-                        }
-                        _ => {
-                            let value = map.next_value()?;
-                            extra_fields.push((key, value));
-                        }
-                    }
-                }
-                
-                let username = username.ok_or_else(|| de::Error::missing_field("username"))?;
-                let password = password.ok_or_else(|| de::Error::missing_field("password"))?;
-                
-                Ok(ServiceEntry {
-                    username,
-                    password,
-                    extra_fields,
-                })
-            }
+#[derive(Default)]
+pub struct ServiceMap {
+    pub services: IndexMap<String, ServiceEntry>,
+}
+
+impl ServiceMap {
+    pub fn new() -> Self {
+        ServiceMap {
+            services: IndexMap::new(),
         }
-        
-        deserializer.deserialize_map(ServiceEntryVisitor(PhantomData))
+    }
+
+    pub fn insert(&mut self, key: String, value: ServiceEntry) -> Option<ServiceEntry> {
+        self.services.insert(key, value)
     }
 }
 
-impl Serialize for ServiceEntry {
+impl Serialize for ServiceMap {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer,
+        S: serde::Serializer,
     {
-        let mut map = serializer.serialize_map(Some(2 + self.extra_fields.len()))?;
-        
-        map.serialize_entry("username", &self.username)?;
-        map.serialize_entry("password", &self.password)?;
-        
-        for (key, value) in &self.extra_fields {
-            map.serialize_entry(key, value)?;
+        NestedMap::from_entries(&self.services).serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ServiceMap {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let nested = NestedMap::deserialize(deserializer)?;
+
+        let mut service_map = ServiceMap::new();
+        nested.extract_entries("", &mut service_map);
+
+        Ok(service_map)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum NestedMap {
+    Map(IndexMap<String, Box<NestedMap>>),
+    Leaf(ServiceEntry),
+}
+
+impl NestedMap {
+    pub fn from_entries(entries: &IndexMap<String, ServiceEntry>) -> Self {
+        let mut root = NestedMap::Map(IndexMap::new());
+
+        for (path, entry) in entries {
+            let segments: Vec<&str> = path.split('/').collect();
+            insert_at_path(&mut root, &segments, entry.clone());
         }
-        
-        map.end()
+
+        root
+    }
+
+    pub fn extract_entries(&self, prefix: &str, map: &mut ServiceMap) {
+        match self {
+            NestedMap::Leaf(entry) => {
+                map.services.insert(prefix.to_string(), entry.clone());
+            }
+            NestedMap::Map(children) => {
+                for (key, child) in children {
+                    let new_prefix = if prefix.is_empty() {
+                        key.clone()
+                    } else {
+                        format!("{}/{}", prefix, key)
+                    };
+                    child.extract_entries(&new_prefix, map);
+                }
+            }
+        }
+    }
+}
+
+fn insert_at_path(node: &mut NestedMap, segments: &[&str], entry: ServiceEntry) {
+    if segments.is_empty() {
+        panic!("Path must not be empty.");
+    }
+
+    match node {
+        NestedMap::Map(children) => {
+            let current = segments[0];
+
+            if segments.len() == 1 {
+                children.insert(current.to_string(), Box::new(NestedMap::Leaf(entry)));
+            } else {
+                if let Some(mut child) = children.get_mut(current) {
+                    insert_at_path(&mut child, &segments[1..], entry);
+                } else {
+                    let mut new_child = Box::new(NestedMap::Map(IndexMap::new()));
+                    insert_at_path(&mut new_child, &segments[1..], entry);
+                    children.insert(current.to_string(), new_child);
+                }
+            }
+        }
+        NestedMap::Leaf(_) => {
+            panic!("Cannot insert to this path, as it is not a list. Turn it into a list by naming the current entry in the store.")
+        }
     }
 }

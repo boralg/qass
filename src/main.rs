@@ -7,11 +7,11 @@ use argon2::Argon2;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD as b64, Engine as _};
 use clap::{Parser, Subcommand};
 use directories::UserDirs;
+use indexmap::IndexMap;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
-use service::ServiceEntry;
+use service::{ServiceEntry, ServiceMap};
 use std::{
-    collections::HashMap,
     fs::{self, File},
     path::PathBuf,
 };
@@ -84,15 +84,15 @@ fn add(service: String, username: String) -> anyhow::Result<()> {
     let key = derive_key(&master_pwd, &salt)?;
     let (nonce, ciphertext) = encrypt_password(&password, &key)?;
 
-    let mut salts = load_from_file::<SaltEntry>(&salts_path)?;
-    let mut credentials = load_from_file(&credentials_path)?;
+    let mut salts: IndexMap<String, SaltEntry> = load_from_file(&salts_path)?;
+    let mut credentials: ServiceMap = load_from_file(&credentials_path)?;
 
     credentials.insert(
         service.clone(),
         ServiceEntry {
             username,
             password: b64.encode(ciphertext),
-            extra_fields: vec![],
+            extra_fields: IndexMap::new(),
         },
     );
     salts.insert(
@@ -135,23 +135,23 @@ fn encrypt_password(password: &str, key: &[u8; 32]) -> anyhow::Result<(Vec<u8>, 
     Ok((nonce.to_vec(), ciphertext))
 }
 
-fn load_from_file<E>(path: &PathBuf) -> anyhow::Result<HashMap<String, E>>
+fn load_from_file<E>(path: &PathBuf) -> anyhow::Result<E>
 where
-    E: for<'a> Deserialize<'a>,
+    E: for<'a> Deserialize<'a> + Default,
 {
     if !path.exists() {
-        return Ok(HashMap::new());
+        return Ok(Default::default());
     }
 
     let content = fs::read_to_string(path)?;
     Ok(if content.trim().is_empty() {
-        HashMap::new()
+        Default::default()
     } else {
         serde_yaml::from_str(&content)?
     })
 }
 
-fn save_to_file<E>(path: &PathBuf, data: &HashMap<String, E>) -> anyhow::Result<()>
+fn save_to_file<E>(path: &PathBuf, data: &E) -> anyhow::Result<()>
 where
     E: Serialize,
 {

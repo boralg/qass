@@ -16,6 +16,7 @@ argon2 = "0.5.3"
 base64 = "0.22.1"
 clap = { version = "4.5.29", features = ["derive", "env"] }
 directories = "6.0.0"
+indexmap = { version = "2.8.0", features = ["serde"] }
 rand = "0.9.0"
 rpassword = "7.3.1"
 serde = { version = "1.0.217", features = ["derive"] }
