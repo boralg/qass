@@ -93,7 +93,7 @@ fn type_password(service: String) -> anyhow::Result<()> {
 
     let event_handler = DeviceEventsHandler::new(Duration::from_millis(10))
         .expect("Could not initialize event loop");
-    let _mouse_move_guard = event_handler.on_key_up(move |keycode| {
+        let _keypress_guard = event_handler.on_key_up(move |keycode| {
             if matches!(keycode, Keycode::Space) {
                 pressed_clone.store(true, Ordering::SeqCst);
             }
