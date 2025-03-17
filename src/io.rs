@@ -9,7 +9,7 @@ pub fn config_dir() -> anyhow::Result<PathBuf> {
         .ok_or(anyhow!("Could not determine home directory"))
 }
 
-pub fn load_from_file<E>(path: &PathBuf) -> anyhow::Result<E>
+pub fn load_from_yaml<E>(path: &PathBuf) -> anyhow::Result<E>
 where
     E: for<'a> Deserialize<'a> + Default,
 {
