@@ -22,18 +22,19 @@ pub fn derive_key(master_pwd: &str, base64_salt: &str) -> anyhow::Result<[u8; 32
     Ok(key)
 }
 
-pub fn encrypt_password(password: &str, key: &[u8; 32]) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
+pub fn encrypt(cleartext: &str, key: &[u8; 32]) -> anyhow::Result<(Vec<u8>, Vec<u8>)> {
     let cipher = Aes256GcmSiv::new_from_slice(key)
         .map_err(|_| anyhow!("Failed to initialize cipher from derived key"))?;
     let nonce = Aes256GcmSiv::generate_nonce(&mut OsRng);
     let ciphertext = cipher
-        .encrypt(&nonce, password.as_bytes())
-        .map_err(|_| anyhow!("Failed to enrypt password"))?;
+        .encrypt(&nonce, cleartext.as_bytes())
+        .map_err(|_| anyhow!("Failed to encrypt cleartext"))?;
 
     Ok((nonce.to_vec(), ciphertext))
 }
 
-pub fn decrypt_password(ciphertext: &[u8], key: &[u8; 32], nonce: &[u8]) -> anyhow::Result<String> {
+// TODO: zeroizing?
+pub fn decrypt(ciphertext: &[u8], key: &[u8; 32], nonce: &[u8]) -> anyhow::Result<String> {
     let cipher = Aes256GcmSiv::new_from_slice(key)
         .map_err(|_| anyhow!("Failed to initialize cipher from derived key"))?;
 
@@ -41,7 +42,7 @@ pub fn decrypt_password(ciphertext: &[u8], key: &[u8; 32], nonce: &[u8]) -> anyh
 
     let plaintext = cipher
         .decrypt(nonce, ciphertext)
-        .map_err(|_| anyhow!("Failed to decrypt password"))?;
+        .map_err(|_| anyhow!("Failed to decrypt ciphertext"))?;
 
-    String::from_utf8(plaintext).map_err(|_| anyhow!("Password is not valid UTF-8"))
+    String::from_utf8(plaintext).map_err(|_| anyhow!("Result is not valid UTF-8"))
 }

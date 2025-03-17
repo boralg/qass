@@ -4,7 +4,7 @@ use indexmap::IndexMap;
 use zeroize::Zeroizing;
 
 use crate::{
-    crypto::{decrypt_password, derive_key, encrypt_password, generate_salt},
+    crypto::{decrypt, derive_key, encrypt, generate_salt},
     io::{config_dir, load_from_file, save_to_file},
     service::{SaltEntry, ServiceEntry, ServiceMap},
 };
@@ -25,7 +25,7 @@ pub fn add(
 
     let salt = generate_salt();
     let key = derive_key(&master_password, &salt)?;
-    let (nonce, ciphertext) = encrypt_password(&password, &key)?;
+    let (nonce, ciphertext) = encrypt(&password, &key)?;
 
     let mut salts: IndexMap<String, SaltEntry> = load_from_file(&salts_path)?;
     let mut credentials: ServiceMap = load_from_file(&credentials_path)?;
@@ -78,5 +78,5 @@ pub fn get(service: String) -> anyhow::Result<Zeroizing<String>> {
     let ciphertext = b64.decode(&service_entry.password)?;
     let nonce = b64.decode(&salt_entry.nonce)?;
 
-    Ok(Zeroizing::new(decrypt_password(&ciphertext, &key, &nonce)?))
+    Ok(Zeroizing::new(decrypt(&ciphertext, &key, &nonce)?))
 }
