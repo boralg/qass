@@ -1,20 +1,12 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, marker::PhantomData};
 
+use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::service::{SaltEntry, ServiceEntry};
 
-pub struct HiddenMapIndex {
-    pub maps: HashMap<String, HiddenMap>,
-}
-
-impl HiddenMapIndex {
-    pub fn new() -> Self {
-        Self {
-            maps: HashMap::new(),
-        }
-    }
-}
+pub type HiddenMapIndex = IndexMap<String, EncryptedHiddenMap>;
+type EncryptedHiddenMap = String;
 
 #[derive(Serialize, Deserialize)]
 pub struct HiddenMap {
