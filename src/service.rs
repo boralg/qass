@@ -32,6 +32,12 @@ impl ServiceMap {
     }
 }
 
+impl From<IndexMap<String, ServiceEntry>> for ServiceMap {
+    fn from(value: IndexMap<String, ServiceEntry>) -> Self {
+        ServiceMap { services: value }
+    }
+}
+
 impl Serialize for ServiceMap {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

@@ -131,7 +131,7 @@ pub fn hide(path: String, master_password: Zeroizing<String>) -> anyhow::Result<
         },
     );
 
-    save_to_file(&credentials_path, &rest)?;
+    save_to_file(&credentials_path, &ServiceMap::from(rest))?;
     save_to_file(&salts_path, &salts_rest)?;
     save_to_file(&hidden_path, &hidden_credentials)?;
 
