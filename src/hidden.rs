@@ -5,14 +5,15 @@ use serde::{Deserialize, Serialize};
 
 use crate::service::{SaltEntry, ServiceEntry};
 
-pub type HiddenMapIndex = IndexMap<String, EncryptedHiddenMap>;
-type EncryptedHiddenMap = String;
+pub type HiddenMapIndex = IndexMap<String, HiddenMap>;
 
 #[derive(Serialize, Deserialize)]
 pub struct HiddenMap {
-    services: HashMap<String, HiddenEntry>,
-    salt: SaltEntry,
+    pub services: EncryptedHiddenMap,
+    pub salt: SaltEntry,
 }
+
+type EncryptedHiddenMap = String;
 
 #[derive(Serialize, Deserialize)]
 pub struct UnsaltedHiddenMap {
@@ -33,13 +34,6 @@ impl UnsaltedHiddenMap {
         salt: SaltEntry,
     ) -> Option<HiddenEntry> {
         self.services.insert(key, HiddenEntry { service, salt })
-    }
-
-    pub fn add_salt(self, salt: SaltEntry) -> HiddenMap {
-        HiddenMap {
-            services: self.services,
-            salt,
-        }
     }
 }
 

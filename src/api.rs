@@ -5,7 +5,8 @@ use zeroize::Zeroizing;
 
 use crate::{
     crypto::{decrypt, derive_key, encrypt, generate_salt},
-    io::{config_dir, load_from_file, save_to_file},
+    hidden::{HiddenMap, HiddenMapIndex, UnsaltedHiddenMap},
+    io::{config_dir, load_from_yaml, save_to_file},
     service::{SaltEntry, ServiceEntry, ServiceMap},
 };
 
@@ -27,8 +28,8 @@ pub fn add(
     let key = derive_key(&master_password, &salt)?;
     let (nonce, ciphertext) = encrypt(&password, &key)?;
 
-    let mut salts: IndexMap<String, SaltEntry> = load_from_file(&salts_path)?;
-    let mut credentials: ServiceMap = load_from_file(&credentials_path)?;
+    let mut salts: IndexMap<String, SaltEntry> = load_from_yaml(&salts_path)?;
+    let mut credentials: ServiceMap = load_from_yaml(&credentials_path)?;
 
     credentials.insert(
         service.clone(),
@@ -61,8 +62,8 @@ pub fn get(service: String) -> anyhow::Result<Zeroizing<String>> {
     let salts_path = dir.join("salts.yml");
     let credentials_path = dir.join("credentials.yml");
 
-    let salts: IndexMap<String, SaltEntry> = load_from_file(&salts_path)?;
-    let credentials: ServiceMap = load_from_file(&credentials_path)?;
+    let salts: IndexMap<String, SaltEntry> = load_from_yaml(&salts_path)?;
+    let credentials: ServiceMap = load_from_yaml(&credentials_path)?;
 
     let service_entry = credentials
         .services
@@ -79,4 +80,60 @@ pub fn get(service: String) -> anyhow::Result<Zeroizing<String>> {
     let nonce = b64.decode(&salt_entry.nonce)?;
 
     Ok(Zeroizing::new(decrypt(&ciphertext, &key, &nonce)?))
+}
+
+pub fn hide(path: String, master_password: Zeroizing<String>) -> anyhow::Result<()> {
+    let dir = config_dir()?;
+    if !dir.exists() {
+        bail!("Config not found. Run 'qass init' first");
+    }
+
+    let salts_path = dir.join("salts.yml");
+    let credentials_path = dir.join("credentials.yml");
+    let hidden_path = dir.join("hidden.yml");
+
+    let salts: IndexMap<String, SaltEntry> = load_from_yaml(&salts_path)?;
+    let credentials: ServiceMap = load_from_yaml(&credentials_path)?;
+    let mut hidden_credentials: HiddenMapIndex = load_from_yaml(&hidden_path)?;
+
+    let (to_hide, rest): (Vec<(_, _)>, Vec<(_, _)>) =
+        credentials.services.into_iter().partition(|(k, _)| {
+            k.starts_with(&path)
+                && (k.len() == path.len() || k.chars().nth(path.len()).unwrap() == '/')
+        });
+    let (to_hide, rest): (IndexMap<_, _>, IndexMap<_, _>) =
+        (IndexMap::from_iter(to_hide), IndexMap::from_iter(rest));
+    let mut salts_rest = salts;
+
+    let mut hidden = UnsaltedHiddenMap::new();
+    for (k, v) in to_hide {
+        if let Some(salt) = salts_rest.shift_remove(&k) {
+            hidden.insert(k, v, salt);
+        } else {
+            bail!("No salt found for {k}.");
+        }
+    }
+
+    let hidden_str = serde_yaml::to_string(&hidden)?;
+
+    let salt = generate_salt();
+    let key = derive_key(&master_password, &salt)?;
+    let (nonce, ciphertext) = encrypt(&hidden_str, &key)?;
+
+    hidden_credentials.insert(
+        path,
+        HiddenMap {
+            services: b64.encode(ciphertext),
+            salt: SaltEntry {
+                nonce: b64.encode(nonce),
+                salt,
+            },
+        },
+    );
+
+    save_to_file(&credentials_path, &rest)?;
+    save_to_file(&salts_path, &salts_rest)?;
+    save_to_file(&hidden_path, &hidden_credentials)?;
+
+    Ok(())
 }

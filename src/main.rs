@@ -1,12 +1,8 @@
 use anyhow::{anyhow, bail};
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD as b64, Engine as _};
 use clap::{Parser, Subcommand};
-use crypto::{decrypt_password, derive_key, encrypt_password, generate_salt};
 use device_query::{DeviceEvents, DeviceEventsHandler, Keycode};
 use enigo::{Enigo, Keyboard, Settings};
-use indexmap::IndexMap;
-use io::{config_dir, load_from_file, save_to_file};
-use service::{SaltEntry, ServiceEntry, ServiceMap};
+use io::config_dir;
 use std::{
     fs::{self, File},
     sync::{
@@ -20,6 +16,7 @@ use zeroize::Zeroizing;
 
 pub mod api;
 pub mod crypto;
+pub mod hidden;
 pub mod io;
 pub mod service;
 
@@ -36,6 +33,7 @@ enum Commands {
     Init,
     Add { service: String, username: String },
     Type { service: String },
+    Hide { path: String },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -45,6 +43,7 @@ fn main() -> anyhow::Result<()> {
         Commands::Init => init(),
         Commands::Add { service, username } => add(service, username),
         Commands::Type { service } => type_password(service),
+        Commands::Hide { path } => hide(path),
     }
 }
 
@@ -52,7 +51,7 @@ fn init() -> anyhow::Result<()> {
     let dir = io::config_dir()?;
     fs::create_dir_all(&dir)?;
 
-    for file in &["credentials.yml", "salts.yml"] {
+    for file in &["credentials.yml", "salts.yml", "hidden.bin"] {
         let path = dir.join(file);
         if !path.exists() {
             File::create(path)?;
@@ -89,10 +88,10 @@ fn type_password(service: String) -> anyhow::Result<()> {
 
     let pressed = Arc::new(AtomicBool::new(false));
     {
-    let pressed_clone = pressed.clone();
+        let pressed_clone = pressed.clone();
 
-    let event_handler = DeviceEventsHandler::new(Duration::from_millis(10))
-        .expect("Could not initialize event loop");
+        let event_handler = DeviceEventsHandler::new(Duration::from_millis(10))
+            .expect("Could not initialize event loop");
         let _keypress_guard = event_handler.on_key_up(move |keycode| {
             if matches!(keycode, Keycode::Space) {
                 pressed_clone.store(true, Ordering::SeqCst);
@@ -102,7 +101,7 @@ fn type_password(service: String) -> anyhow::Result<()> {
         while start_time.elapsed() < timeout {
             if pressed.load(Ordering::SeqCst) {
                 break;
-        }
+            }
 
             thread::sleep(Duration::from_millis(50));
         }
@@ -118,4 +117,15 @@ fn type_password(service: String) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn hide(path: String) -> anyhow::Result<()> {
+    let dir = config_dir()?;
+    if !dir.exists() {
+        bail!("Config not found. Run 'qass init' first");
+    }
+
+    let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
+
+    api::hide(path, master_pwd)
 }
