@@ -34,6 +34,7 @@ enum Commands {
     Add { service: String, username: String },
     Type { service: String },
     Hide { path: String },
+    Unhide { path: String },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -44,6 +45,7 @@ fn main() -> anyhow::Result<()> {
         Commands::Add { service, username } => add(service, username),
         Commands::Type { service } => type_password(service),
         Commands::Hide { path } => hide(path),
+        Commands::Unhide { path } => unhide(path),
     }
 }
 
@@ -129,3 +131,15 @@ fn hide(path: String) -> anyhow::Result<()> {
 
     api::hide(path, master_pwd)
 }
+
+fn unhide(path: String) -> anyhow::Result<()> {
+    let dir = config_dir()?;
+    if !dir.exists() {
+        bail!("Config not found. Run 'qass init' first");
+    }
+
+    let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
+
+    api::unhide(path, master_pwd)
+}
+
