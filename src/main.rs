@@ -114,7 +114,6 @@ fn type_password(service: String) -> anyhow::Result<()> {
 
         enigo.key(enigo::Key::Backspace, enigo::Direction::Press);
         thread::sleep(Duration::from_millis(50));
-        enigo.key(enigo::Key::Backspace, enigo::Direction::Press);
         enigo.text(&password);
     }
 
@@ -142,4 +141,3 @@ fn unhide(path: String) -> anyhow::Result<()> {
 
     api::unhide(path, master_pwd)
 }
-
