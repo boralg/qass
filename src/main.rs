@@ -81,7 +81,8 @@ fn type_password(service: String) -> anyhow::Result<()> {
         bail!("Config not found. Run 'qass init' first");
     }
 
-    let password = api::get(service)?;
+    let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
+    let password = api::get(service, master_pwd)?;
 
     println!("Focus the target field and press SPACEBAR to type password (5s timeout)...");
 

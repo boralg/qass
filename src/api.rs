@@ -53,7 +53,7 @@ pub fn add(
     Ok(())
 }
 
-pub fn get(service: String) -> anyhow::Result<Zeroizing<String>> {
+pub fn get(service: String, master_password: Zeroizing<String>) -> anyhow::Result<Zeroizing<String>> {
     let dir = config_dir()?;
     if !dir.exists() {
         bail!("Config not found. Run 'qass init' first");
@@ -73,8 +73,7 @@ pub fn get(service: String) -> anyhow::Result<Zeroizing<String>> {
         .get(&service)
         .ok_or_else(|| anyhow!("Service '{}' not found in salts", service))?;
 
-    let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
-    let key = derive_key(&master_pwd, &salt_entry.salt)?;
+    let key = derive_key(&master_password, &salt_entry.salt)?;
 
     let ciphertext = b64.decode(&service_entry.password)?;
     let nonce = b64.decode(&salt_entry.nonce)?;
@@ -175,4 +174,8 @@ pub fn unhide(path: String, master_password: Zeroizing<String>) -> anyhow::Resul
     save_to_file(&hidden_path, &hidden_credentials)?;
 
     Ok(())
+}
+
+pub fn get_hidden() {
+
 }
