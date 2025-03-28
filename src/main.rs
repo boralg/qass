@@ -35,6 +35,7 @@ enum Commands {
     Type { service: String },
     Hide { path: String },
     Unhide { path: String },
+    TypeHidden { service: String },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -46,6 +47,7 @@ fn main() -> anyhow::Result<()> {
         Commands::Type { service } => type_password(service),
         Commands::Hide { path } => hide(path),
         Commands::Unhide { path } => unhide(path),
+        Commands::TypeHidden { service } => type_hidden_password(service),
     }
 }
 
@@ -84,6 +86,12 @@ fn type_password(service: String) -> anyhow::Result<()> {
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
     let password = api::get(service, master_pwd)?;
 
+    type_password_text(&password)?;
+
+    Ok(())
+}
+
+fn type_password_text(password: &str) -> anyhow::Result<()> {
     println!("Focus the target field and press SPACEBAR to type password (5s timeout)...");
 
     let start_time = Instant::now();
@@ -113,10 +121,10 @@ fn type_password(service: String) -> anyhow::Result<()> {
     if pressed.load(Ordering::SeqCst) {
         let mut enigo = Enigo::new(&Settings::default()).expect("Could not create keypresses");
 
-        enigo.key(enigo::Key::Backspace, enigo::Direction::Press);
+        enigo.key(enigo::Key::Backspace, enigo::Direction::Press)?;
         thread::sleep(Duration::from_millis(50));
-        enigo.key(enigo::Key::Backspace, enigo::Direction::Release);
-        enigo.text(&password);
+        enigo.key(enigo::Key::Backspace, enigo::Direction::Release)?;
+        enigo.text(password)?;
     }
 
     Ok(())
@@ -143,3 +151,19 @@ fn unhide(path: String) -> anyhow::Result<()> {
 
     api::unhide(path, master_pwd)
 }
+
+fn type_hidden_password(service: String) -> anyhow::Result<()> {
+    let dir = config_dir()?;
+    if !dir.exists() {
+        bail!("Config not found. Run 'qass init' first");
+    }
+
+    let master_pwd_unhide = Zeroizing::new(rpassword::prompt_password("Master Password (Unhide): ")?);
+    let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
+    let password = api::get_hidden(service, master_pwd_unhide, master_pwd)?;
+
+    type_password_text(&password)?;
+
+    Ok(())
+}
+
