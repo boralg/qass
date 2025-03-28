@@ -115,6 +115,7 @@ fn type_password(service: String) -> anyhow::Result<()> {
 
         enigo.key(enigo::Key::Backspace, enigo::Direction::Press);
         thread::sleep(Duration::from_millis(50));
+        enigo.key(enigo::Key::Backspace, enigo::Direction::Release);
         enigo.text(&password);
     }
 
