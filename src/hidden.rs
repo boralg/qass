@@ -15,7 +15,7 @@ pub struct HiddenMap {
 
 type EncryptedHiddenMap = String;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct UnsaltedHiddenMap {
     pub services: HashMap<String, HiddenEntry>,
 }
@@ -37,7 +37,7 @@ impl UnsaltedHiddenMap {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct HiddenEntry {
     pub service: ServiceEntry,
     pub salt: SaltEntry,

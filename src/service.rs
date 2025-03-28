@@ -1,13 +1,13 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct SaltEntry {
     pub salt: String,
     pub nonce: String,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct ServiceEntry {
     pub username: String,
     pub password: String,
