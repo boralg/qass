@@ -30,10 +30,18 @@
               arch = "x86_64-linux";
               inherit toolchainPackages;
               depsBuild = with pkgs; [
+                patchelf
                 pkg-config
                 xorg.libX11
                 xdotool
               ];
+              postInstall = crateName: ''
+                  find $out -type f -exec sh -c '
+                  if file "$1" | grep -q "ELF .* executable"; then
+                    patchelf --set-interpreter "/lib64/ld-linux-x86-64.so.2" "$1"
+                  fi
+                ' sh {} \;
+              '';
               env = {
                 buildInputs = with pkgs; [
                   xdotool
