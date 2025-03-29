@@ -1,4 +1,4 @@
-use std::{collections::HashMap, marker::PhantomData};
+use std::collections::HashMap;
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};

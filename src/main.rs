@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail};
+use anyhow::bail;
 use clap::{Parser, Subcommand};
 use device_query::{DeviceEvents, DeviceEventsHandler, Keycode};
 use enigo::{Enigo, Keyboard, Settings};
