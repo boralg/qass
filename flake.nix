@@ -34,6 +34,11 @@
                 xorg.libX11
                 xdotool
               ];
+              env = {
+                buildInputs = with pkgs; [
+                  xdotool
+                ];
+              };
             }
           ];
         tomersLib = tomers.libFor system targetPlatforms;
