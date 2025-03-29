@@ -98,7 +98,7 @@ fn type_password(service: String) -> anyhow::Result<()> {
 }
 
 fn type_password_text(password: &str) -> anyhow::Result<()> {
-    println!("Focus the target field and press SPACEBAR to type password (5s timeout)...");
+    println!("Focus the target field and press CONTROL to type password (5s timeout)...");
 
     let start_time = Instant::now();
     let timeout = Duration::from_secs(5);
@@ -110,7 +110,8 @@ fn type_password_text(password: &str) -> anyhow::Result<()> {
         let event_handler = DeviceEventsHandler::new(Duration::from_millis(10))
             .expect("Could not initialize event loop");
         let _keypress_guard = event_handler.on_key_up(move |keycode| {
-            if matches!(keycode, Keycode::Space) {
+            println!("{:?}", keycode);
+            if matches!(keycode, Keycode::LControl | Keycode::RControl) {
                 pressed_clone.store(true, Ordering::SeqCst);
             }
         });
@@ -127,8 +128,8 @@ fn type_password_text(password: &str) -> anyhow::Result<()> {
     if pressed.load(Ordering::SeqCst) {
         let mut enigo = Enigo::new(&Settings::default()).expect("Could not create keypresses");
 
-        enigo.key(enigo::Key::Backspace, enigo::Direction::Press)?;
-        thread::sleep(Duration::from_millis(50));
+        // enigo.key(enigo::Key::Backspace, enigo::Direction::Press)?;
+        // thread::sleep(Duration::from_millis(50));
         enigo.key(enigo::Key::Backspace, enigo::Direction::Release)?;
         enigo.text(password)?;
     }
