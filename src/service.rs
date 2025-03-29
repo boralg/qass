@@ -1,5 +1,6 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
+use zeroize::Zeroizing;
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct SaltEntry {
@@ -12,6 +13,13 @@ pub struct ServiceEntry {
     pub username: String,
     pub password: String,
     #[serde(flatten)]
+    pub extra_fields: IndexMap<String, String>,
+}
+
+pub struct UnencryptedService {
+    pub service: String,
+    pub username: String,
+    pub password: Zeroizing<String>,
     pub extra_fields: IndexMap<String, String>,
 }
 

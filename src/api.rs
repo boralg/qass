@@ -7,13 +7,28 @@ use crate::{
     crypto::{decrypt, derive_key, encrypt, generate_salt},
     hidden::{HiddenMap, HiddenMapIndex, UnsaltedHiddenMap},
     io::{config_dir, load_from_yaml, save_to_file},
-    service::{SaltEntry, ServiceEntry, ServiceMap},
+    service::{SaltEntry, ServiceEntry, ServiceMap, UnencryptedService},
 };
 
 pub fn add(
     service: String,
     username: String,
     password: Zeroizing<String>,
+    master_password: Zeroizing<String>,
+) -> anyhow::Result<()> {
+    add_many(
+        vec![UnencryptedService {
+            service,
+            username,
+            password,
+            extra_fields: IndexMap::new(),
+        }],
+        master_password,
+    )
+}
+
+pub fn add_many(
+    services: Vec<UnencryptedService>,
     master_password: Zeroizing<String>,
 ) -> anyhow::Result<()> {
     let dir = config_dir()?;
@@ -24,12 +39,19 @@ pub fn add(
     let salts_path = dir.join("salts.yml");
     let credentials_path = dir.join("credentials.yml");
 
-    let salt = generate_salt();
-    let key = derive_key(&master_password, &salt)?;
-    let (nonce, ciphertext) = encrypt(&password, &key)?;
-
     let mut salts: IndexMap<String, SaltEntry> = load_from_yaml(&salts_path)?;
     let mut credentials: ServiceMap = load_from_yaml(&credentials_path)?;
+
+    for UnencryptedService {
+        service,
+        username,
+        password,
+        ..
+    } in services
+    {
+        let salt = generate_salt();
+        let key = derive_key(&master_password, &salt)?;
+        let (nonce, ciphertext) = encrypt(&password, &key)?;
 
     credentials.insert(
         service.clone(),
@@ -46,6 +68,7 @@ pub fn add(
             salt: salt,
         },
     );
+    }
 
     save_to_file(&credentials_path, &credentials)?;
     save_to_file(&salts_path, &salts)?;
