@@ -21,7 +21,7 @@ jobs:
           TAG_NAME="v$(date +'%Y%m%d%H%M%S')"
           echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
           echo "tag=$TAG_NAME" >> $GITHUB_OUTPUT
-          
+
       - name: Create Empty Release
         id: create_release
         uses: softprops/action-gh-release@v1
@@ -45,6 +45,16 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v2
+
+      - name: Cache Nix Store
+        uses: actions/cache@v3
+        with:
+          path: |
+            /nix/store
+            ~/.cache/nix
+          key: nix-${{ matrix.target }}-${{ hashFiles('**/*.nix') }}
+          restore-keys: |
+            nix-${{ matrix.target }}-
 
       - name: Setup Nix
         uses: cachix/install-nix-action@v21
