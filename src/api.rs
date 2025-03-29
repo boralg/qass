@@ -312,3 +312,39 @@ pub fn list() -> anyhow::Result<Vec<String>> {
 
     Ok(services)
 }
+
+pub fn sync(path: String, master_password: Zeroizing<String>) -> anyhow::Result<usize> {
+    let dir = config_dir()?;
+    if !dir.exists() {
+        bail!("Config not found. Run 'qass init' first");
+    }
+
+    let credentials_path = dir.join("credentials.yml");
+    let salts_path = dir.join("salts.yml");
+
+    let credentials: ServiceMap = load_from_yaml(&credentials_path)?;
+    let salts: IndexMap<String, SaltEntry> = load_from_yaml(&salts_path)?;
+
+    let services_to_sync: Vec<UnencryptedService> = credentials
+        .services
+        .into_iter()
+        .filter(|(p, _)| !salts.contains_key(p))
+        .filter(|(p, _)| {
+            p.starts_with(&path)
+                && (path.is_empty()
+                    || p.len() == path.len()
+                    || p.chars().nth(path.len()).unwrap() == '/')
+        })
+        .map(|(p, s)| UnencryptedService {
+            service: p,
+            username: s.username,
+            password: Zeroizing::new(s.password),
+            extra_fields: s.extra_fields,
+        })
+        .collect();
+
+    let count = services_to_sync.len();
+    add_many(services_to_sync, master_password)?;
+
+    Ok(count)
+}

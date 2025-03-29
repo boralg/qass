@@ -38,6 +38,7 @@ enum Commands {
     TypeHidden { service: String },
     Import { path: String },
     List,
+    Sync { path: Option<String> },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -52,6 +53,7 @@ fn main() -> anyhow::Result<()> {
         Commands::TypeHidden { service } => type_hidden_password(service),
         Commands::Import { path } => import_csv(path),
         Commands::List => list_services(),
+        Commands::Sync { path } => sync(path),
     }
 }
 
@@ -192,6 +194,24 @@ fn list_services() -> anyhow::Result<()> {
     for path in api::list()? {
         println!("{}", path);
     }
+
+    Ok(())
+}
+
+fn sync(path: Option<String>) -> anyhow::Result<()> {
+    let dir = config_dir()?;
+    if !dir.exists() {
+        bail!("Config not found. Run 'qass init' first");
+    }
+
+    let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
+
+    let count = match path {
+        Some(p) => api::sync(p, master_pwd)?,
+        None => api::sync("".to_owned(), master_pwd)?,
+    };
+
+    println!("Successfully synced {} entries", count);
 
     Ok(())
 }
