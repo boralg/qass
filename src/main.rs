@@ -37,6 +37,7 @@ enum Commands {
     Unhide { path: String },
     TypeHidden { service: String },
     Import { path: String },
+    List,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -50,6 +51,7 @@ fn main() -> anyhow::Result<()> {
         Commands::Unhide { path } => unhide(path),
         Commands::TypeHidden { service } => type_hidden_password(service),
         Commands::Import { path } => import_csv(path),
+        Commands::List => list_services(),
     }
 }
 
@@ -182,6 +184,14 @@ fn import_csv(path: String) -> anyhow::Result<()> {
     // TODO: progress bar
     let count = api::import_csv(path, master_pwd)?;
     println!("Successfully imported {} services", count);
+
+    Ok(())
+}
+
+fn list_services() -> anyhow::Result<()> {
+    for path in api::list()? {
+        println!("{}", path);
+    }
 
     Ok(())
 }

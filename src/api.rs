@@ -290,3 +290,25 @@ pub fn import_csv(path: String, master_password: Zeroizing<String>) -> anyhow::R
 
     Ok(count)
 }
+
+pub fn list() -> anyhow::Result<Vec<String>> {
+    let dir = config_dir()?;
+    if !dir.exists() {
+        bail!("Config not found. Run 'qass init' first");
+    }
+
+    let credentials_path = dir.join("credentials.yml");
+    let salts_path = dir.join("salts.yml");
+
+    let credentials: ServiceMap = load_from_yaml(&credentials_path)?;
+    let salts: IndexMap<String, SaltEntry> = load_from_yaml(&salts_path)?;
+
+    let services: Vec<String> = credentials
+        .services
+        .keys()
+        .filter(|key| salts.contains_key(*key))
+        .cloned()
+        .collect();
+
+    Ok(services)
+}
