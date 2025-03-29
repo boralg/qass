@@ -4,9 +4,6 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
   initialize_release:
@@ -38,7 +35,7 @@ jobs:
     name: Build Binaries
     runs-on: ubuntu-latest
     needs: initialize_release
-
+    
     strategy:
       matrix:
         target: [
@@ -60,9 +57,9 @@ jobs:
           mkdir -p output
           zip -r output/qass-${{ matrix.target }}.zip result/*
 
-      - name: Upload to Release
-        uses: AButler/upload-release-assets@v3.0
+      - name: Upload Release Asset
+        uses: softprops/action-gh-release@v1
         with:
-          files: "output/qass-${{ matrix.target }}.zip"
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          release-id: ${{ needs.initialize_release.outputs.release_id }}
+          tag_name: ${{ needs.initialize_release.outputs.tag_name }}
+          files: output/qass-${{ matrix.target }}.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
