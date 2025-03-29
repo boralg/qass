@@ -18,6 +18,7 @@ pub mod api;
 pub mod crypto;
 pub mod hidden;
 pub mod io;
+pub mod server;
 pub mod service;
 
 #[derive(Parser)]
@@ -39,6 +40,10 @@ enum Commands {
     Import { path: String },
     List,
     Sync { path: Option<String> },
+    Serve { 
+        #[clap(default_value = "7277")]
+        port: u16
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -54,6 +59,7 @@ fn main() -> anyhow::Result<()> {
         Commands::Import { path } => import_csv(path),
         Commands::List => list_services(),
         Commands::Sync { path } => sync(path),
+        Commands::Serve { port } => serve(port),
     }
 }
 
@@ -214,4 +220,10 @@ fn sync(path: Option<String>) -> anyhow::Result<()> {
     println!("Successfully synced {} entries", count);
 
     Ok(())
+}
+
+fn serve(port: u16) -> anyhow::Result<()> {
+    let rt = tokio::runtime::Runtime::new()?;
+
+    rt.block_on(async { server::start_server(port).await })
 }
