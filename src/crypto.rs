@@ -35,7 +35,7 @@ pub fn encrypt(cleartext: &str, key: &[u8; 32]) -> anyhow::Result<(Vec<u8>, Vec<
         padded_bytes[..cleartext_bytes.len()].copy_from_slice(cleartext_bytes);
         cleartext_bytes = &padded_bytes;
     }
-    
+
     let ciphertext = cipher
         .encrypt(&nonce, cleartext_bytes)
         .map_err(|_| anyhow!("Failed to encrypt cleartext"))?;
@@ -51,9 +51,12 @@ pub fn decrypt(ciphertext: &[u8], key: &[u8; 32], nonce: &[u8]) -> anyhow::Resul
     let plaintext = cipher
         .decrypt(nonce, ciphertext)
         .map_err(|_| anyhow!("Failed to decrypt ciphertext"))?;
-    
-    let null_pos = plaintext.iter().position(|&b| b == 0).unwrap_or(plaintext.len());
+
+    let null_pos = plaintext
+        .iter()
+        .position(|&b| b == 0)
+        .unwrap_or(plaintext.len());
     let trimmed = &plaintext[..null_pos];
-    
+
     String::from_utf8(trimmed.to_vec()).map_err(|_| anyhow!("Result is not valid UTF-8"))
 }
