@@ -36,6 +36,7 @@ enum Commands {
     Hide { path: String },
     Unhide { path: String },
     TypeHidden { service: String },
+    Import { path: String },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -48,6 +49,7 @@ fn main() -> anyhow::Result<()> {
         Commands::Hide { path } => hide(path),
         Commands::Unhide { path } => unhide(path),
         Commands::TypeHidden { service } => type_hidden_password(service),
+        Commands::Import { path } => import_csv(path),
     }
 }
 
@@ -158,7 +160,8 @@ fn type_hidden_password(service: String) -> anyhow::Result<()> {
         bail!("Config not found. Run 'qass init' first");
     }
 
-    let master_pwd_unhide = Zeroizing::new(rpassword::prompt_password("Master Password (Unhide): ")?);
+    let master_pwd_unhide =
+        Zeroizing::new(rpassword::prompt_password("Master Password (Unhide): ")?);
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
     let password = api::get_hidden(service, master_pwd_unhide, master_pwd)?;
 
@@ -167,3 +170,17 @@ fn type_hidden_password(service: String) -> anyhow::Result<()> {
     Ok(())
 }
 
+fn import_csv(path: String) -> anyhow::Result<()> {
+    let dir = config_dir()?;
+    if !dir.exists() {
+        bail!("Config not found. Run 'qass init' first");
+    }
+
+    let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
+
+    println!("Importing services...");
+    let count = api::import_csv(path, master_pwd)?;
+    println!("Successfully imported {} services", count);
+
+    Ok(())
+}

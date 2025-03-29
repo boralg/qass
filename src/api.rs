@@ -53,21 +53,21 @@ pub fn add_many(
         let key = derive_key(&master_password, &salt)?;
         let (nonce, ciphertext) = encrypt(&password, &key)?;
 
-    credentials.insert(
-        service.clone(),
-        ServiceEntry {
-            username,
-            password: b64.encode(ciphertext),
-            extra_fields: IndexMap::new(),
-        },
-    );
-    salts.insert(
-        service,
-        SaltEntry {
-            nonce: b64.encode(nonce),
-            salt: salt,
-        },
-    );
+        credentials.insert(
+            service.clone(),
+            ServiceEntry {
+                username,
+                password: b64.encode(ciphertext),
+                extra_fields: IndexMap::new(),
+            },
+        );
+        salts.insert(
+            service,
+            SaltEntry {
+                nonce: b64.encode(nonce),
+                salt: salt,
+            },
+        );
     }
 
     save_to_file(&credentials_path, &credentials)?;
@@ -239,4 +239,54 @@ pub fn get_hidden(
     let nonce = b64.decode(&hidden.salt.nonce)?;
 
     Ok(Zeroizing::new(decrypt(&ciphertext, &key, &nonce)?))
+}
+
+pub fn import_csv(path: String, master_password: Zeroizing<String>) -> anyhow::Result<usize> {
+    let dir = config_dir()?;
+    if !dir.exists() {
+        bail!("Config not found. Run 'qass init' first");
+    }
+
+    let file = std::fs::File::open(&path)?;
+    let mut reader = csv::Reader::from_reader(file);
+
+    let headers = reader.headers()?.clone();
+
+    let url_idx = headers
+        .iter()
+        .position(|h| h == "url")
+        .ok_or_else(|| anyhow!("Missing 'url' column"))?;
+    let username_idx = headers
+        .iter()
+        .position(|h| h == "username")
+        .ok_or_else(|| anyhow!("Missing 'username' column"))?;
+    let password_idx = headers
+        .iter()
+        .position(|h| h == "password")
+        .ok_or_else(|| anyhow!("Missing 'password' column"))?;
+
+    let mut services = vec![];
+    for result in reader.records() {
+        let record = result?;
+
+        if record.len() <= url_idx || record.len() <= username_idx || record.len() <= password_idx {
+            continue;
+        }
+
+        let url = &record[url_idx];
+        let username = &record[username_idx];
+        let password = &record[password_idx];
+
+        services.push(UnencryptedService {
+            service: url.to_string(),
+            username: username.to_string(),
+            password: Zeroizing::new(password.to_string()),
+            extra_fields: IndexMap::new(),
+        });
+    }
+
+    let count = services.len();
+    add_many(services, master_password)?;
+
+    Ok(count)
 }
