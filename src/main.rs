@@ -179,6 +179,7 @@ fn import_csv(path: String) -> anyhow::Result<()> {
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
 
     println!("Importing services...");
+    // TODO: progress bar
     let count = api::import_csv(path, master_pwd)?;
     println!("Successfully imported {} services", count);
 
