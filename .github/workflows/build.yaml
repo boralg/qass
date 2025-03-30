@@ -3,7 +3,7 @@ name: Build and Release Sursface
 on:
   push:
     branches:
-      - 'release-*'
+      - 'release/*'
 
 jobs:
   initialize_release:
@@ -19,7 +19,7 @@ jobs:
         id: extract_version
         run: |
           BRANCH_NAME=${GITHUB_REF#refs/heads/}
-          VERSION=${BRANCH_NAME#release-}
+          VERSION=${BRANCH_NAME#release/}
           echo "VERSION=v${VERSION}" >> $GITHUB_ENV
           echo "version=v${VERSION}" >> $GITHUB_OUTPUT
 
