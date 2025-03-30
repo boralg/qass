@@ -227,10 +227,8 @@ fn sync(path: Option<String>) -> anyhow::Result<()> {
 
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
 
-    let count = match path {
-        Some(p) => api::sync(p, master_pwd)?,
-        None => api::sync("".to_owned(), master_pwd)?,
-    };
+    let path = path.unwrap_or("".to_owned());
+    let count = api::sync(path, master_pwd)?;
 
     println!("Successfully synced {} entries", count);
 
