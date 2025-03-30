@@ -331,6 +331,7 @@ pub fn sync(path: String, master_password: Zeroizing<String>) -> anyhow::Result<
         .into_iter()
         .filter(|(p, _)| credentials.services.contains_key(p))
         .collect();
+    save_to_file(&salts_path, &salts)?;
 
     let to_add: Vec<UnencryptedService> = credentials
         .services
