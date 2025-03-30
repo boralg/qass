@@ -17,13 +17,13 @@ type EncryptedHiddenMap = String;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UnsaltedHiddenMap {
-    pub services: HashMap<String, HiddenEntry>,
+    pub services: IndexMap<String, HiddenEntry>,
 }
 
 impl UnsaltedHiddenMap {
     pub fn new() -> Self {
         Self {
-            services: HashMap::new(),
+            services: IndexMap::new(),
         }
     }
 
