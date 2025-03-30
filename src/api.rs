@@ -123,11 +123,13 @@ pub fn hide(path: String, master_password: Zeroizing<String>) -> anyhow::Result<
 
     let (to_hide, rest): (Vec<(_, _)>, Vec<(_, _)>) =
         credentials.services.into_iter().partition(|(k, _)| {
-            k.starts_with(&path)
-                && (k.len() == path.len() || k.chars().nth(path.len()).unwrap() == '/')
+            path == "/"
+                || k.starts_with(&path)
+                    && (k.len() == path.len() || k.chars().nth(path.len()).unwrap() == '/')
         });
     let (to_hide, rest): (IndexMap<_, _>, IndexMap<_, _>) =
         (IndexMap::from_iter(to_hide), IndexMap::from_iter(rest));
+
     let mut salts_rest = salts;
 
     let mut hidden = UnsaltedHiddenMap::new();
