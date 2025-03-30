@@ -83,7 +83,7 @@ fn init() -> anyhow::Result<()> {
     let dir = io::config_dir()?;
     fs::create_dir_all(&dir)?;
 
-    for file in &["credentials.yml", "salts.yml", "hidden.bin"] {
+    for file in &["credentials.yml", "salts.yml", "hidden.yml"] {
         let path = dir.join(file);
         if !path.exists() {
             File::create(path)?;
