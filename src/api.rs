@@ -325,7 +325,12 @@ pub fn sync(path: String, master_password: Zeroizing<String>) -> anyhow::Result<
     let credentials: ServiceMap = load_from_yaml(&credentials_path)?;
     let salts: IndexMap<String, SaltEntry> = load_from_yaml(&salts_path)?;
 
-    let services_to_sync: Vec<UnencryptedService> = credentials
+    let salts: IndexMap<String, SaltEntry> = salts
+        .into_iter()
+        .filter(|(p, _)| credentials.services.contains_key(p))
+        .collect();
+
+    let to_add: Vec<UnencryptedService> = credentials
         .services
         .into_iter()
         .filter(|(p, _)| !salts.contains_key(p))
@@ -343,8 +348,8 @@ pub fn sync(path: String, master_password: Zeroizing<String>) -> anyhow::Result<
         })
         .collect();
 
-    let count = services_to_sync.len();
-    add_many(services_to_sync, master_password)?;
+    let count = to_add.len();
+    add_many(to_add, master_password)?;
 
     Ok(count)
 }
