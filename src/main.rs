@@ -32,17 +32,32 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Init,
-    Add { service: String, username: String },
-    Type { service: String },
-    Hide { path: String },
-    Unhide { path: String },
-    TypeHidden { service: String },
-    Import { path: String },
+    Add {
+        service: String,
+        username: String,
+    },
+    Type {
+        service: String,
+    },
+    Hide {
+        path: String,
+    },
+    Unhide {
+        path: String,
+    },
+    TypeHidden {
+        service: String,
+    },
+    Import {
+        path: String,
+    },
     List,
-    Sync { path: Option<String> },
+    Sync {
+        path: Option<String>,
+    },
     Serve { 
         #[clap(default_value = "7277")]
-        port: u16
+        port: u16,
     },
 }
 
