@@ -279,8 +279,12 @@ pub fn import_csv(path: String, master_password: Zeroizing<String>) -> anyhow::R
         let username = &record[username_idx];
         let password = &record[password_idx];
 
+        let mut service = url.to_string();
+        service.push('/');
+        service.push_str(username);
+
         services.push(UnencryptedService {
-            service: url.to_string(),
+            service,
             username: username.to_string(),
             password: Zeroizing::new(password.to_string()),
             extra_fields: IndexMap::new(),
