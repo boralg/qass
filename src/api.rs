@@ -337,10 +337,9 @@ pub fn sync(path: String, master_password: Zeroizing<String>) -> anyhow::Result<
         .into_iter()
         .filter(|(p, _)| !salts.contains_key(p))
         .filter(|(p, _)| {
-            p.starts_with(&path)
-                && (path.is_empty()
-                    || p.len() == path.len()
-                    || p.chars().nth(path.len()).unwrap() == '/')
+            path == "/"
+                || p.starts_with(&path)
+                    && (p.len() == path.len() || p.chars().nth(path.len()).unwrap() == '/')
         })
         .map(|(p, s)| UnencryptedService {
             service: p,

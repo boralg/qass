@@ -53,9 +53,10 @@ enum Commands {
     },
     List,
     Sync {
-        path: Option<String>,
+        #[clap(default_value = "/")]
+        path: String,
     },
-    Serve { 
+    Serve {
         #[clap(default_value = "7277")]
         port: u16,
     },
@@ -219,7 +220,7 @@ fn list_services() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn sync(path: Option<String>) -> anyhow::Result<()> {
+fn sync(path: String) -> anyhow::Result<()> {
     let dir = config_dir()?;
     if !dir.exists() {
         bail!("Config not found. Run 'qass init' first");
@@ -227,7 +228,6 @@ fn sync(path: Option<String>) -> anyhow::Result<()> {
 
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
 
-    let path = path.unwrap_or("".to_owned());
     let count = api::sync(path, master_pwd)?;
 
     println!("Successfully synced {} entries", count);
