@@ -1,8 +1,7 @@
-use anyhow::bail;
+use api::State;
 use clap::{Parser, Subcommand};
 use device_query::{DeviceEvents, DeviceEventsHandler, Keycode};
 use enigo::{Enigo, Keyboard, Settings};
-use io::config_dir;
 use std::{
     fs::{self, File},
     sync::{
@@ -79,6 +78,7 @@ fn main() -> anyhow::Result<()> {
     }
 }
 
+// TODO: move to api
 fn init() -> anyhow::Result<()> {
     let dir = io::config_dir()?;
     fs::create_dir_all(&dir)?;
@@ -94,29 +94,22 @@ fn init() -> anyhow::Result<()> {
 }
 
 fn add(service: String, username: String) -> anyhow::Result<()> {
-    let dir = config_dir()?;
-    if !dir.exists() {
-        bail!("Config not found. Run 'qass init' first");
-    }
+    let mut state = State::load()?;
 
     let password = Zeroizing::new(rpassword::prompt_password("Password: ")?);
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
 
-    api::add(service, username, password, master_pwd)
+    state.add(service, username, password, master_pwd)?;
+    state.save()
 }
 
 fn type_password(service: String) -> anyhow::Result<()> {
-    let dir = config_dir()?;
-    if !dir.exists() {
-        bail!("Config not found. Run 'qass init' first");
-    }
+    let state = State::load()?;
 
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
-    let password = api::get(service, master_pwd)?;
+    let password = state.get(service, master_pwd)?;
 
-    type_password_text(&password)?;
-
-    Ok(())
+    type_password_text(&password)
 }
 
 fn type_password_text(password: &str) -> anyhow::Result<()> {
@@ -159,37 +152,30 @@ fn type_password_text(password: &str) -> anyhow::Result<()> {
 }
 
 fn hide(path: String) -> anyhow::Result<()> {
-    let dir = config_dir()?;
-    if !dir.exists() {
-        bail!("Config not found. Run 'qass init' first");
-    }
+    let mut state = State::load()?;
 
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
 
-    api::hide(path, master_pwd)
+    state.hide(path, master_pwd)?;
+    state.save()
 }
 
 fn unhide(path: String) -> anyhow::Result<()> {
-    let dir = config_dir()?;
-    if !dir.exists() {
-        bail!("Config not found. Run 'qass init' first");
-    }
+    let mut state = State::load()?;
 
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
 
-    api::unhide(path, master_pwd)
+    state.unhide(path, master_pwd)?;
+    state.save()
 }
 
 fn type_hidden_password(service: String) -> anyhow::Result<()> {
-    let dir = config_dir()?;
-    if !dir.exists() {
-        bail!("Config not found. Run 'qass init' first");
-    }
+    let state = State::load()?;
 
     let master_pwd_unhide =
         Zeroizing::new(rpassword::prompt_password("Master Password (Unhide): ")?);
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
-    let password = api::get_hidden(service, master_pwd_unhide, master_pwd)?;
+    let password = state.get_hidden(service, master_pwd_unhide, master_pwd)?;
 
     type_password_text(&password)?;
 
@@ -197,23 +183,25 @@ fn type_hidden_password(service: String) -> anyhow::Result<()> {
 }
 
 fn import_csv(path: String) -> anyhow::Result<()> {
-    let dir = config_dir()?;
-    if !dir.exists() {
-        bail!("Config not found. Run 'qass init' first");
-    }
+    let mut state = State::load()?;
 
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
 
     println!("Importing services...");
+
     // TODO: progress bar
-    let count = api::import_csv(path, master_pwd)?;
+    let count = state.import_csv(path, master_pwd)?;
+    state.save()?;
+
     println!("Successfully imported {} services", count);
 
     Ok(())
 }
 
 fn list_services() -> anyhow::Result<()> {
-    for path in api::list()? {
+    let state = State::load()?;
+
+    for path in state.list()? {
         println!("{}", path);
     }
 
@@ -221,14 +209,12 @@ fn list_services() -> anyhow::Result<()> {
 }
 
 fn sync(path: String) -> anyhow::Result<()> {
-    let dir = config_dir()?;
-    if !dir.exists() {
-        bail!("Config not found. Run 'qass init' first");
-    }
+    let mut state = State::load()?;
 
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
 
-    let count = api::sync(path, master_pwd)?;
+    let count = state.sync(path, master_pwd)?;
+    state.save()?;
 
     println!("Successfully synced {} entries", count);
 

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
 use zeroize::Zeroizing;
 
-use crate::api;
+use crate::api::State;
 
 #[derive(Debug, Deserialize)]
 struct AddRequest {
@@ -29,12 +29,18 @@ struct GetResponse {
 }
 
 async fn add_handler(Json(payload): Json<AddRequest>) -> Result<(), (StatusCode, String)> {
-    match api::add(
-        payload.service,
-        payload.username,
-        Zeroizing::new(payload.password),
-        Zeroizing::new(payload.master_password),
-    ) {
+    let result = (|| {
+        let mut state = State::load()?;
+        state.add(
+            payload.service,
+            payload.username,
+            Zeroizing::new(payload.password),
+            Zeroizing::new(payload.master_password),
+        )?;
+        state.save()
+    })();
+
+    match result {
         Ok(_) => Ok(()),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
     }
@@ -43,10 +49,15 @@ async fn add_handler(Json(payload): Json<AddRequest>) -> Result<(), (StatusCode,
 async fn get_handler(
     Json(payload): Json<GetRequest>,
 ) -> Result<Json<GetResponse>, (StatusCode, String)> {
-    match api::get(
-        payload.service.clone(),
-        Zeroizing::new(payload.master_password),
-    ) {
+    let result = (|| {
+        let state = State::load()?;
+        state.get(
+            payload.service.clone(),
+            Zeroizing::new(payload.master_password),
+        )
+    })();
+
+    match result {
         Ok(password) => Ok(Json(GetResponse {
             password: password.to_string(),
         })),
@@ -55,7 +66,12 @@ async fn get_handler(
 }
 
 async fn list_handler() -> Result<Json<Vec<String>>, (StatusCode, String)> {
-    match api::list() {
+    let result = (|| {
+        let state = State::load()?;
+        state.list()
+    })();
+
+    match result {
         Ok(services) => Ok(Json(services)),
         Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, e.to_string())),
     }
