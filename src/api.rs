@@ -307,6 +307,37 @@ impl State {
         Ok(services)
     }
 
+    pub fn unlock(
+        &mut self,
+        path: String,
+        master_password: Zeroizing<String>
+    ) -> anyhow::Result<usize> {
+        let services: Vec<String> = self.salts.keys().cloned()
+            .filter(|p| {
+                path == "/"
+                    || p.starts_with(&path)
+                        && (p.len() == path.len() || p.chars().nth(path.len()).unwrap() == '/')
+            })
+            .collect();
+        
+        let mut unlocked_count = 0;
+
+        for service in services {
+            match self.get(service.clone(), master_password.clone()) {
+                Ok(cleartext) => {
+                    if let Some(entry) = self.credentials.services.get_mut(&service) {
+                        entry.password = cleartext.to_string();
+                        self.salts.shift_remove(&service);
+                        unlocked_count += 1;
+                    }
+                }
+                Err(_) => continue,
+            }
+        }
+
+        Ok(unlocked_count)
+    }
+
     pub fn sync(
         &mut self,
         path: String,

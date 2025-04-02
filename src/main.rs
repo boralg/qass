@@ -4,6 +4,7 @@ use device_query::{DeviceEvents, DeviceEventsHandler, Keycode};
 use enigo::{Enigo, Keyboard, Settings};
 use std::{
     fs::{self, File},
+    io::Write,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -55,6 +56,9 @@ enum Commands {
         #[clap(default_value = "/")]
         path: String,
     },
+    Unlock {
+        path: String,
+    },
     Serve {
         #[clap(default_value = "7277")]
         port: u16,
@@ -73,6 +77,7 @@ fn main() -> anyhow::Result<()> {
         Commands::TypeHidden { service } => type_hidden_password(service),
         Commands::Import { path } => import_csv(path),
         Commands::List => list_services(),
+        Commands::Unlock { path } => unlock(path),
         Commands::Sync { path } => sync(path),
         Commands::Serve { port } => serve(port),
     }
@@ -225,4 +230,31 @@ fn serve(port: u16) -> anyhow::Result<()> {
     let rt = tokio::runtime::Runtime::new()?;
 
     rt.block_on(async { server::start_server(port).await })
+}
+
+fn unlock(path: String) -> anyhow::Result<()> {
+    let mut state = State::load()?;
+
+    println!("WARNING: This will decrypt passwords and store them in cleartext.");
+    println!("Anyone with access to your store directory will be able to see these passwords.");
+    println!("You can re-encrypt them later using the 'sync' command.");
+    print!("Are you sure you want to continue? [y/N]: ");
+    std::io::stdout().flush()?;
+
+    let mut response = String::new();
+    std::io::stdin().read_line(&mut response)?;
+
+    if response.trim().to_lowercase() != "y" {
+        println!("Operation canceled.");
+        return Ok(());
+    }
+
+    let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
+
+    let count = state.unlock(path, master_pwd)?;
+    state.save()?;
+
+    println!("Successfully unlocked {} entries", count);
+
+    Ok(())
 }
