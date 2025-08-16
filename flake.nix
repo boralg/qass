@@ -34,6 +34,8 @@
                 pkg-config
                 xorg.libX11
                 xdotool
+                libxkbcommon
+
               ];
               postInstall = crateName: ''
                   find $out -type f -exec sh -c '
@@ -46,6 +48,20 @@
                 buildInputs = with pkgs; [
                   xdotool
                 ];
+                LD_LIBRARY_PATH =
+                  with pkgs;
+                  lib.makeLibraryPath [
+                    libxkbcommon
+                    wayland
+                    xorg.libX11
+                    xorg.libXrandr
+                    xorg.libXrender
+                    xorg.libXcursor
+                    xorg.libxcb
+                    xorg.libXi
+                    libGL
+                    vulkan-loader
+                  ];
               };
             }
           ];

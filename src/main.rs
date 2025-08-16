@@ -16,6 +16,8 @@ use zeroize::Zeroizing;
 
 pub mod api;
 pub mod crypto;
+#[cfg(feature = "gui")]
+pub mod gui;
 pub mod hidden;
 pub mod io;
 pub mod server;
@@ -63,6 +65,8 @@ enum Commands {
         #[clap(default_value = "7277")]
         port: u16,
     },
+    #[cfg(feature = "gui")]
+    Gui,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -80,6 +84,8 @@ fn main() -> anyhow::Result<()> {
         Commands::Unlock { path } => unlock(path),
         Commands::Sync { path } => sync(path),
         Commands::Serve { port } => serve(port),
+        #[cfg(feature = "gui")]
+        Commands::Gui => gui::run(),
     }
 }
 
@@ -149,7 +155,7 @@ fn type_password_text(password: &str) -> anyhow::Result<()> {
 
         // enigo.key(enigo::Key::Backspace, enigo::Direction::Press)?;
         // thread::sleep(Duration::from_millis(50));
-        enigo.key(enigo::Key::Backspace, enigo::Direction::Release)?;
+        // enigo.key(enigo::Key::Backspace, enigo::Direction::Release)?;
         enigo.text(password)?;
     }
 
