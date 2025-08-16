@@ -35,14 +35,12 @@ impl Default for MyApp {
             suggestions: vec![
                 "Apple".to_string(),
                 "Banana".to_string(),
+                "Blueberry".to_string(),
+                "Blackberry".to_string(),
                 "Cherry".to_string(),
                 "Date".to_string(),
-                "Elderberry".to_string(),
-                "Fig".to_string(),
-                "Grape".to_string(),
-                "Honeydew".to_string(),
-                "Ice cream".to_string(),
-                "Jackfruit".to_string(),
+                "Melon".to_string(),
+                "Mango".to_string(),
             ],
         }
     }
