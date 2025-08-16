@@ -3,7 +3,9 @@ use eframe::egui;
 
 pub fn run() -> anyhow::Result<()> {
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([320.0, 240.0])
+            .with_decorations(false),
         ..Default::default()
     };
 
@@ -66,6 +68,15 @@ impl MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
+            if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
+                if self.show_suggestions {
+                    self.show_suggestions = false;
+                    self.selected_suggestion = None;
+                } else {
+                    std::process::exit(0);
+                }
+            }
+
             let search_text = self.search_text.clone();
             let search_response = ui.text_edit_singleline(&mut self.search_text);
             let filtered_suggestions = MyApp::filtered_suggestions(&search_text, &self.suggestions);
