@@ -94,6 +94,14 @@ impl eframe::App for MyApp {
                 }
             }
 
+            if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
+                self.search_text = filtered_suggestions
+                    .get(self.selected_suggestion)
+                    .unwrap()
+                    .1
+                    .to_string();
+            }
+
             ui.separator();
             egui::ScrollArea::vertical()
                 .max_height(100.0)
