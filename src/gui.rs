@@ -30,7 +30,7 @@ impl Default for MyApp {
     fn default() -> Self {
         Self {
             search_text: String::new(),
-            show_suggestions: false,
+            show_suggestions: true,
             selected_suggestion: None,
             suggestions: vec![
                 "Apple".to_string(),
@@ -67,23 +67,13 @@ impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
-                if self.show_suggestions {
-                    self.show_suggestions = false;
-                    self.selected_suggestion = None;
-                } else {
-                    std::process::exit(0);
-                }
+                std::process::exit(0);
             }
 
-            let search_text = self.search_text.clone();
-            let search_response = ui.text_edit_singleline(&mut self.search_text);
+            let mut search_text = self.search_text.clone();
+            let search_response = ui.text_edit_singleline(&mut search_text);
             let filtered_suggestions = MyApp::filtered_suggestions(&search_text, &self.suggestions);
-
-            if search_response.has_focus() && !filtered_suggestions.is_empty() {
-                self.show_suggestions = true;
-            } else if !search_response.has_focus() {
-                self.show_suggestions = false;
-            }
+            self.search_text = search_text.clone();
 
             if search_response.has_focus() && ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
                 if let Some(selected) = self.selected_suggestion {
@@ -104,24 +94,8 @@ impl eframe::App for MyApp {
                 }
             }
 
-            if search_response.has_focus() && ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
-                if let Some(selected_idx) = self.selected_suggestion {
-                    if let Some((_, suggestion)) = filtered_suggestions.get(selected_idx) {
-                        self.search_text = (*suggestion).clone();
-                        self.show_suggestions = false;
-                        self.selected_suggestion = None;
-                    }
-                }
-            }
-
-            if search_response.has_focus() && ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
-                self.show_suggestions = false;
-                self.selected_suggestion = None;
-            }
-
             if self.show_suggestions && !filtered_suggestions.is_empty() {
                 ui.separator();
-                ui.label("Suggestions:");
 
                 egui::ScrollArea::vertical()
                     .max_height(100.0)
@@ -133,8 +107,6 @@ impl eframe::App for MyApp {
 
                             if response.clicked() {
                                 self.search_text = (*suggestion).clone();
-                                self.show_suggestions = false;
-                                self.selected_suggestion = None;
                             }
 
                             if response.hovered() {
@@ -142,11 +114,6 @@ impl eframe::App for MyApp {
                             }
                         }
                     });
-            }
-
-            if !self.search_text.is_empty() {
-                ui.separator();
-                ui.label(format!("You selected: {}", self.search_text));
             }
         });
     }
