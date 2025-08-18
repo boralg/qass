@@ -72,6 +72,8 @@ impl eframe::App for MyApp {
 
             let mut search_text = self.search_text.clone();
             let search_response = ui.text_edit_singleline(&mut search_text);
+            search_response.request_focus();
+            
             let filtered_suggestions = MyApp::filtered_suggestions(&search_text, &self.suggestions);
             self.search_text = search_text.clone();
 
