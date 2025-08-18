@@ -21,7 +21,6 @@ pub fn run() -> anyhow::Result<()> {
 
 struct MyApp {
     search_text: String,
-    show_suggestions: bool,
     selected_suggestion: Option<usize>,
     suggestions: Vec<String>,
 }
@@ -30,7 +29,6 @@ impl Default for MyApp {
     fn default() -> Self {
         Self {
             search_text: String::new(),
-            show_suggestions: true,
             selected_suggestion: None,
             suggestions: vec![
                 "Apple".to_string(),
@@ -73,30 +71,32 @@ impl eframe::App for MyApp {
             let mut search_text = self.search_text.clone();
             let search_response = ui.text_edit_singleline(&mut search_text);
             search_response.request_focus();
-            
+
             let filtered_suggestions = MyApp::filtered_suggestions(&search_text, &self.suggestions);
             self.search_text = search_text.clone();
 
-            if search_response.has_focus() && ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
-                if let Some(selected) = self.selected_suggestion {
-                    self.selected_suggestion =
-                        Some((selected + 1).min(filtered_suggestions.len() - 1));
-                } else if !filtered_suggestions.is_empty() {
-                    self.selected_suggestion = Some(0);
-                }
-            }
-
-            if search_response.has_focus() && ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
-                if let Some(selected) = self.selected_suggestion {
-                    if selected > 0 {
-                        self.selected_suggestion = Some(selected - 1);
+            if search_response.has_focus() {
+                if ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
+                    if let Some(selected) = self.selected_suggestion {
+                        self.selected_suggestion =
+                            Some((selected + 1).min(filtered_suggestions.len() - 1));
+                    } else if !filtered_suggestions.is_empty() {
+                        self.selected_suggestion = Some(0);
                     }
-                } else if !filtered_suggestions.is_empty() {
-                    self.selected_suggestion = Some(filtered_suggestions.len() - 1);
+                }
+
+                if ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
+                    if let Some(selected) = self.selected_suggestion {
+                        if selected > 0 {
+                            self.selected_suggestion = Some(selected - 1);
+                        }
+                    } else if !filtered_suggestions.is_empty() {
+                        self.selected_suggestion = Some(filtered_suggestions.len() - 1);
+                    }
                 }
             }
 
-            if self.show_suggestions && !filtered_suggestions.is_empty() {
+            if !filtered_suggestions.is_empty() {
                 ui.separator();
 
                 egui::ScrollArea::vertical()
