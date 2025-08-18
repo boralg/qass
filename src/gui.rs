@@ -75,6 +75,10 @@ impl eframe::App for MyApp {
             let filtered_suggestions = MyApp::filtered_suggestions(&search_text, &self.suggestions);
             self.search_text = search_text.clone();
 
+            if filtered_suggestions.is_empty() {
+                return;
+            }
+
             if ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
                 self.selected_suggestion += 1;
                 if self.selected_suggestion >= filtered_suggestions.len() {
@@ -84,33 +88,30 @@ impl eframe::App for MyApp {
 
             if ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
                 if self.selected_suggestion == 0 {
-                    self.selected_suggestion = std::cmp::max(filtered_suggestions.len() - 1, 0);
+                    self.selected_suggestion = filtered_suggestions.len() - 1;
                 } else {
                     self.selected_suggestion -= 1;
                 }
             }
 
-            if !filtered_suggestions.is_empty() {
-                ui.separator();
+            ui.separator();
+            egui::ScrollArea::vertical()
+                .max_height(100.0)
+                .show(ui, |ui| {
+                    for (list_idx, (_, suggestion)) in filtered_suggestions.iter().enumerate() {
+                        let is_selected = self.selected_suggestion == list_idx;
 
-                egui::ScrollArea::vertical()
-                    .max_height(100.0)
-                    .show(ui, |ui| {
-                        for (list_idx, (_, suggestion)) in filtered_suggestions.iter().enumerate() {
-                            let is_selected = self.selected_suggestion == list_idx;
+                        let response = ui.selectable_label(is_selected, suggestion.as_str());
 
-                            let response = ui.selectable_label(is_selected, suggestion.as_str());
-
-                            if response.clicked() {
-                                self.search_text = (*suggestion).clone();
-                            }
-
-                            if response.hovered() {
-                                self.selected_suggestion = list_idx;
-                            }
+                        if response.clicked() {
+                            self.search_text = (*suggestion).clone();
                         }
-                    });
-            }
+
+                        if response.hovered() {
+                            self.selected_suggestion = list_idx;
+                        }
+                    }
+                });
         });
     }
 }
