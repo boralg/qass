@@ -10,22 +10,22 @@ pub fn run() -> anyhow::Result<()> {
     };
 
     eframe::run_native(
-        "My egui App",
+        "qass",
         options,
-        Box::new(|cc| Ok(Box::<MyApp>::default())),
+        Box::new(|cc| Ok(Box::<QassGui>::default())),
     )
     .map_err(|e| anyhow!("Failed to run qass GUI: {:?}", e))?;
 
     Ok(())
 }
 
-struct MyApp {
+struct QassGui {
     search_text: String,
     selected_suggestion: usize,
     suggestions: Vec<String>,
 }
 
-impl Default for MyApp {
+impl Default for QassGui {
     fn default() -> Self {
         Self {
             search_text: String::new(),
@@ -44,7 +44,7 @@ impl Default for MyApp {
     }
 }
 
-impl MyApp {
+impl QassGui {
     fn filtered_suggestions<'a>(
         search_text: &'a str,
         suggestions: &'a Vec<String>,
@@ -61,7 +61,7 @@ impl MyApp {
     }
 }
 
-impl eframe::App for MyApp {
+impl eframe::App for QassGui {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
@@ -72,7 +72,7 @@ impl eframe::App for MyApp {
             let search_response = ui.text_edit_singleline(&mut search_text);
             search_response.request_focus();
 
-            let filtered_suggestions = MyApp::filtered_suggestions(&search_text, &self.suggestions);
+            let filtered_suggestions = QassGui::filtered_suggestions(&search_text, &self.suggestions);
             self.search_text = search_text.clone();
 
             if filtered_suggestions.is_empty() {
