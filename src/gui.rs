@@ -21,7 +21,7 @@ pub fn run() -> anyhow::Result<()> {
 
 struct MyApp {
     search_text: String,
-    selected_suggestion: Option<usize>,
+    selected_suggestion: usize,
     suggestions: Vec<String>,
 }
 
@@ -29,7 +29,7 @@ impl Default for MyApp {
     fn default() -> Self {
         Self {
             search_text: String::new(),
-            selected_suggestion: None,
+            selected_suggestion: 0,
             suggestions: vec![
                 "Apple".to_string(),
                 "Banana".to_string(),
@@ -75,24 +75,18 @@ impl eframe::App for MyApp {
             let filtered_suggestions = MyApp::filtered_suggestions(&search_text, &self.suggestions);
             self.search_text = search_text.clone();
 
-            if search_response.has_focus() {
-                if ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
-                    if let Some(selected) = self.selected_suggestion {
-                        self.selected_suggestion =
-                            Some((selected + 1).min(filtered_suggestions.len() - 1));
-                    } else if !filtered_suggestions.is_empty() {
-                        self.selected_suggestion = Some(0);
-                    }
+            if ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
+                self.selected_suggestion += 1;
+                if self.selected_suggestion >= filtered_suggestions.len() {
+                    self.selected_suggestion = 0;
                 }
+            }
 
-                if ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
-                    if let Some(selected) = self.selected_suggestion {
-                        if selected > 0 {
-                            self.selected_suggestion = Some(selected - 1);
-                        }
-                    } else if !filtered_suggestions.is_empty() {
-                        self.selected_suggestion = Some(filtered_suggestions.len() - 1);
-                    }
+            if ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
+                if self.selected_suggestion == 0 {
+                    self.selected_suggestion = std::cmp::max(filtered_suggestions.len() - 1, 0);
+                } else {
+                    self.selected_suggestion -= 1;
                 }
             }
 
@@ -103,7 +97,7 @@ impl eframe::App for MyApp {
                     .max_height(100.0)
                     .show(ui, |ui| {
                         for (list_idx, (_, suggestion)) in filtered_suggestions.iter().enumerate() {
-                            let is_selected = self.selected_suggestion == Some(list_idx);
+                            let is_selected = self.selected_suggestion == list_idx;
 
                             let response = ui.selectable_label(is_selected, suggestion.as_str());
 
@@ -112,7 +106,7 @@ impl eframe::App for MyApp {
                             }
 
                             if response.hovered() {
-                                self.selected_suggestion = Some(list_idx);
+                                self.selected_suggestion = list_idx;
                             }
                         }
                     });
