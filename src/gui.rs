@@ -21,6 +21,7 @@ pub fn run() -> anyhow::Result<()> {
 
 struct QassGui {
     search_text: String,
+    show_suggestions: bool,
     selected_suggestion: usize,
     suggestions: Vec<String>,
 }
@@ -29,6 +30,7 @@ impl Default for QassGui {
     fn default() -> Self {
         Self {
             search_text: String::new(),
+            show_suggestions: false,
             selected_suggestion: 0,
             suggestions: vec![
                 "Apple".to_string(),
@@ -68,12 +70,24 @@ impl eframe::App for QassGui {
                 std::process::exit(0);
             }
 
-            let mut search_text = self.search_text.clone();
-            let search_response = ui.text_edit_singleline(&mut search_text);
+            let search_response = ui.text_edit_singleline(&mut self.search_text);
             search_response.request_focus();
+            let search_text = self.search_text.clone();
 
-            let filtered_suggestions = QassGui::filtered_suggestions(&search_text, &self.suggestions);
-            self.search_text = search_text.clone();
+            if !self.show_suggestions
+                && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Tab))
+            {
+                self.show_suggestions = true;
+                self.selected_suggestion = 0;
+            }
+
+            if !self.show_suggestions {
+                return;
+            }
+
+            ui.separator();
+            let filtered_suggestions =
+                QassGui::filtered_suggestions(&search_text, &self.suggestions);
 
             if filtered_suggestions.is_empty() {
                 return;
@@ -94,15 +108,18 @@ impl eframe::App for QassGui {
                 }
             }
 
-            if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
+            if ctx.input_mut(|i| {
+                i.key_pressed(egui::Key::Enter)
+                    || i.consume_key(egui::Modifiers::NONE, egui::Key::Tab)
+            }) {
                 self.search_text = filtered_suggestions
                     .get(self.selected_suggestion)
                     .unwrap()
                     .1
                     .to_string();
+                self.show_suggestions = false;
             }
 
-            ui.separator();
             egui::ScrollArea::vertical()
                 .max_height(100.0)
                 .show(ui, |ui| {
@@ -113,6 +130,7 @@ impl eframe::App for QassGui {
 
                         if response.clicked() {
                             self.search_text = (*suggestion).clone();
+                            self.show_suggestions = false;
                         }
 
                         if response.hovered() {
