@@ -1,6 +1,8 @@
 use anyhow::anyhow;
 use eframe::egui;
 
+use crate::api::State;
+
 pub fn run() -> anyhow::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -32,16 +34,7 @@ impl Default for QassGui {
             search_text: String::new(),
             show_suggestions: false,
             selected_suggestion: 0,
-            suggestions: vec![
-                "Apple".to_string(),
-                "Banana".to_string(),
-                "Blueberry".to_string(),
-                "Blackberry".to_string(),
-                "Cherry".to_string(),
-                "Date".to_string(),
-                "Melon".to_string(),
-                "Mango".to_string(),
-            ],
+            suggestions: vec![],
         }
     }
 }
@@ -77,8 +70,14 @@ impl eframe::App for QassGui {
             if !self.show_suggestions
                 && ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Tab))
             {
-                self.show_suggestions = true;
-                self.selected_suggestion = 0;
+                if let Ok(state) = State::load() {
+                    self.suggestions = state.list();
+                    self.show_suggestions = true;
+                    self.selected_suggestion = 0;
+                } else {
+                    // TODO: error msg
+                    return;
+                }
             }
 
             if !self.show_suggestions {
