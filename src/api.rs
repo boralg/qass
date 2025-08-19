@@ -295,7 +295,7 @@ impl State {
         Ok(count)
     }
 
-    pub fn list(&self) -> anyhow::Result<Vec<String>> {
+    pub fn list(&self) -> Vec<String> {
         let services: Vec<String> = self
             .credentials
             .services
@@ -304,22 +304,25 @@ impl State {
             .cloned()
             .collect();
 
-        Ok(services)
+        services
     }
 
     pub fn unlock(
         &mut self,
         path: String,
-        master_password: Zeroizing<String>
-    ) -> anyhow::Result<usize> {
-        let services: Vec<String> = self.salts.keys().cloned()
+        master_password: Zeroizing<String>,
+    ) -> usize {
+        let services: Vec<String> = self
+            .salts
+            .keys()
+            .cloned()
             .filter(|p| {
                 path == "/"
                     || p.starts_with(&path)
                         && (p.len() == path.len() || p.chars().nth(path.len()).unwrap() == '/')
             })
             .collect();
-        
+
         let mut unlocked_count = 0;
 
         for service in services {
@@ -335,7 +338,7 @@ impl State {
             }
         }
 
-        Ok(unlocked_count)
+        unlocked_count
     }
 
     pub fn sync(

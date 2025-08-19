@@ -206,7 +206,7 @@ fn import_csv(path: String) -> anyhow::Result<()> {
 fn list_services() -> anyhow::Result<()> {
     let state = State::load()?;
 
-    for path in state.list()? {
+    for path in state.list() {
         println!("{}", path);
     }
 
@@ -245,7 +245,7 @@ fn unlock(path: String) -> anyhow::Result<()> {
 
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
 
-    let count = state.unlock(path, master_pwd)?;
+    let count = state.unlock(path, master_pwd);
     state.save()?;
 
     println!("Successfully unlocked {} entries", count);
