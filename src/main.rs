@@ -20,7 +20,6 @@ pub mod crypto;
 pub mod gui;
 pub mod hidden;
 pub mod io;
-pub mod server;
 pub mod service;
 
 #[derive(Parser)]
@@ -61,10 +60,6 @@ enum Commands {
     Unlock {
         path: String,
     },
-    Serve {
-        #[clap(default_value = "7277")]
-        port: u16,
-    },
     #[cfg(feature = "gui")]
     Gui,
 }
@@ -83,7 +78,6 @@ fn main() -> anyhow::Result<()> {
         Commands::List => list_services(),
         Commands::Unlock { path } => unlock(path),
         Commands::Sync { path } => sync(path),
-        Commands::Serve { port } => serve(port),
         #[cfg(feature = "gui")]
         Commands::Gui => gui::run(),
     }
@@ -230,12 +224,6 @@ fn sync(path: String) -> anyhow::Result<()> {
     println!("Successfully synced {} entries", count);
 
     Ok(())
-}
-
-fn serve(port: u16) -> anyhow::Result<()> {
-    let rt = tokio::runtime::Runtime::new()?;
-
-    rt.block_on(async { server::start_server(port).await })
 }
 
 fn unlock(path: String) -> anyhow::Result<()> {
