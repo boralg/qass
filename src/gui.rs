@@ -31,6 +31,7 @@ enum QassGui {
     SearchSuggestions {
         search_text: String,
         selected_suggestion: usize,
+        prev_selected_suggestion: usize,
         suggestions: Vec<String>,
     },
     SearchError {
@@ -88,6 +89,7 @@ impl QassGui {
                 QassGui::SearchSuggestions {
                     search_text,
                     selected_suggestion: 0,
+                    prev_selected_suggestion: 0,
                     suggestions,
                 }
             }
@@ -123,6 +125,7 @@ impl eframe::App for QassGui {
                 QassGui::SearchSuggestions {
                     search_text,
                     selected_suggestion,
+                    prev_selected_suggestion,
                     suggestions,
                 } => {
                     let search_response = ui.add_sized(
@@ -153,7 +156,7 @@ impl eframe::App for QassGui {
 
                                     let response = ui.selectable_label(is_selected, &suggestion);
 
-                                    if is_selected {
+                                    if is_selected && prev_selected_suggestion != selected_suggestion {
                                         // TODO: scrolling happens one frame late. when scrolling up, the highlight appears on the item one frame early
                                         response.scroll_to_me_animation(
                                             Some(egui::Align::Max),
@@ -174,13 +177,14 @@ impl eframe::App for QassGui {
                                 }
                             });
 
+                        
+                        *prev_selected_suggestion = *selected_suggestion;
                         if ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
                             *selected_suggestion += 1;
                             if *selected_suggestion >= filtered_suggestions.len() {
                                 *selected_suggestion = 0;
                             }
                         }
-
                         if ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
                             if *selected_suggestion == 0 {
                                 *selected_suggestion = filtered_suggestions.len() - 1;
