@@ -118,6 +118,9 @@ impl eframe::App for QassGui {
                         QassGui::filtered_suggestions(search_text.clone(), suggestions);
 
                     if !filtered_suggestions.is_empty() {
+                        *selected_suggestion =
+                            std::cmp::min(*selected_suggestion, filtered_suggestions.len() - 1);
+
                         egui::ScrollArea::vertical()
                             .max_height(100.0)
                             .show(ui, |ui| {
