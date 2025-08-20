@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use anyhow::anyhow;
 use eframe::egui::{self, Color32};
 
@@ -41,15 +43,31 @@ impl QassGui {
     fn filtered_suggestions<'a>(
         search_text: String,
         suggestions: &'a Vec<String>,
-    ) -> Vec<(usize, &'a String)> {
+    ) -> Vec<(usize, &'a str)> {
         if search_text.is_empty() {
             return vec![];
         }
+
+        let search_len = search_text.len();
+        let mut seen = HashSet::new();
 
         suggestions
             .iter()
             .enumerate()
             .filter(|(_, item)| item.to_lowercase().starts_with(&search_text.to_lowercase()))
+            .filter_map(|(i, item)| {
+                let display = if let Some(slash_pos) = item[search_len..].find('/') {
+                    &item[..search_len + slash_pos + 1]
+                } else {
+                    item.as_str()
+                };
+
+                if seen.insert(display) {
+                    Some((i, display))
+                } else {
+                    None
+                }
+            })
             .collect()
     }
 
@@ -107,12 +125,12 @@ impl eframe::App for QassGui {
                                     filtered_suggestions.iter().enumerate()
                                 {
                                     let is_selected = *selected_suggestion == list_idx;
+                                    let suggestion: String = (*suggestion).to_owned();
 
-                                    let response =
-                                        ui.selectable_label(is_selected, suggestion.as_str());
+                                    let response = ui.selectable_label(is_selected, &suggestion);
 
                                     if response.clicked() {
-                                        *search_text = (*suggestion).clone();
+                                        *search_text = suggestion;
                                         next_state = Some(QassGui::Search {
                                             search_text: search_text.to_string(),
                                         });
