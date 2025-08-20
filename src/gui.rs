@@ -132,6 +132,14 @@ impl eframe::App for QassGui {
 
                                     let response = ui.selectable_label(is_selected, &suggestion);
 
+                                    if is_selected {
+                                        // TODO: scrolling happens one frame late. when scrolling up, the highlight appears on the item one frame early
+                                        response.scroll_to_me_animation(
+                                            Some(egui::Align::Max),
+                                            egui::style::ScrollAnimation::none(),
+                                        );
+                                    }
+
                                     if response.clicked() {
                                         *search_text = suggestion;
                                         next_state = Some(QassGui::Search {
