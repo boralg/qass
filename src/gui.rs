@@ -8,7 +8,7 @@ use crate::api::State;
 pub fn run() -> anyhow::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([320.0, 240.0])
+            .with_inner_size([400.0, 150.0])
             .with_decorations(false),
         ..Default::default()
     };
@@ -97,7 +97,10 @@ impl eframe::App for QassGui {
 
             match self {
                 QassGui::Search { search_text } => {
-                    let search_response = ui.text_edit_singleline(search_text);
+                    let search_response = ui.add_sized(
+                        ui.available_size() * egui::vec2(1.0, 0.0),
+                        egui::TextEdit::singleline(search_text),
+                    );
                     search_response.request_focus();
 
                     if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Tab)) {
@@ -109,7 +112,10 @@ impl eframe::App for QassGui {
                     selected_suggestion,
                     suggestions,
                 } => {
-                    let search_response = ui.text_edit_singleline(search_text);
+                    let search_response = ui.add_sized(
+                        ui.available_size() * egui::vec2(1.0, 0.0),
+                        egui::TextEdit::singleline(search_text),
+                    );
                     search_response.request_focus();
 
                     ui.separator();
@@ -124,6 +130,8 @@ impl eframe::App for QassGui {
                         egui::ScrollArea::vertical()
                             .max_height(100.0)
                             .show(ui, |ui| {
+                                ui.set_min_width(ui.available_width());
+
                                 for (list_idx, (_, suggestion)) in
                                     filtered_suggestions.iter().enumerate()
                                 {
@@ -188,7 +196,10 @@ impl eframe::App for QassGui {
                     search_text,
                     error_msg,
                 } => {
-                    let search_response = ui.text_edit_singleline(search_text);
+                    let search_response = ui.add_sized(
+                        ui.available_size() * egui::vec2(1.0, 0.0),
+                        egui::TextEdit::singleline(search_text),
+                    );
                     search_response.request_focus();
 
                     ui.separator();
