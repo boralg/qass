@@ -166,7 +166,7 @@ impl eframe::App for QassGui {
                     search_response.request_focus();
 
                     ui.separator();
-                    ui.colored_label(Color32::RED, error_msg);
+                    ui.colored_label(Color32::YELLOW, error_msg);
 
                     if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Tab)) {
                         next_state = Some(QassGui::suggestions_state(search_text.clone()));
