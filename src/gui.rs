@@ -73,11 +73,24 @@ impl QassGui {
 
     fn suggestions_state(search_text: String) -> QassGui {
         match State::load() {
-            Ok(state) => QassGui::SearchSuggestions {
-                search_text,
-                selected_suggestion: 0,
-                suggestions: state.list(),
-            },
+            Ok(state) => {
+                let suggestions = state.list();
+
+                // TODO: do this repeatedly for more efficiency and less privacy?
+                let filtered_suggestions =
+                    QassGui::filtered_suggestions(search_text.clone(), &suggestions);
+                if filtered_suggestions.len() == 1 {
+                    return QassGui::Search {
+                        search_text: filtered_suggestions[0].1.to_owned(),
+                    };
+                }
+
+                QassGui::SearchSuggestions {
+                    search_text,
+                    selected_suggestion: 0,
+                    suggestions,
+                }
+            }
             Err(e) => QassGui::SearchError {
                 search_text,
                 error_msg: format!("Failed to load credentials: {}", e),
