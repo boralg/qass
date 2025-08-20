@@ -99,63 +99,60 @@ impl eframe::App for QassGui {
                     let filtered_suggestions =
                         QassGui::filtered_suggestions(search_text.clone(), suggestions);
 
-                    // TODO: this will be a bug someday
-                    if filtered_suggestions.is_empty() {
-                        return;
-                    }
+                    if !filtered_suggestions.is_empty() {
+                        egui::ScrollArea::vertical()
+                            .max_height(100.0)
+                            .show(ui, |ui| {
+                                for (list_idx, (_, suggestion)) in
+                                    filtered_suggestions.iter().enumerate()
+                                {
+                                    let is_selected = *selected_suggestion == list_idx;
 
-                    egui::ScrollArea::vertical()
-                        .max_height(100.0)
-                        .show(ui, |ui| {
-                            for (list_idx, (_, suggestion)) in
-                                filtered_suggestions.iter().enumerate()
-                            {
-                                let is_selected = *selected_suggestion == list_idx;
+                                    let response =
+                                        ui.selectable_label(is_selected, suggestion.as_str());
 
-                                let response =
-                                    ui.selectable_label(is_selected, suggestion.as_str());
+                                    if response.clicked() {
+                                        *search_text = (*suggestion).clone();
+                                        next_state = Some(QassGui::Search {
+                                            search_text: search_text.to_string(),
+                                        });
+                                    }
 
-                                if response.clicked() {
-                                    *search_text = (*suggestion).clone();
-                                    next_state = Some(QassGui::Search {
-                                        search_text: search_text.to_string(),
-                                    });
+                                    if response.hovered() {
+                                        *selected_suggestion = list_idx;
+                                    }
                                 }
+                            });
 
-                                if response.hovered() {
-                                    *selected_suggestion = list_idx;
-                                }
+                        if ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
+                            *selected_suggestion += 1;
+                            if *selected_suggestion >= filtered_suggestions.len() {
+                                *selected_suggestion = 0;
                             }
-                        });
-
-                    if ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
-                        *selected_suggestion += 1;
-                        if *selected_suggestion >= filtered_suggestions.len() {
-                            *selected_suggestion = 0;
                         }
-                    }
 
-                    if ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
-                        if *selected_suggestion == 0 {
-                            *selected_suggestion = filtered_suggestions.len() - 1;
-                        } else {
-                            *selected_suggestion -= 1;
+                        if ctx.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
+                            if *selected_suggestion == 0 {
+                                *selected_suggestion = filtered_suggestions.len() - 1;
+                            } else {
+                                *selected_suggestion -= 1;
+                            }
                         }
-                    }
 
-                    if ctx.input_mut(|i| {
-                        i.key_pressed(egui::Key::Enter)
-                            || i.consume_key(egui::Modifiers::NONE, egui::Key::Tab)
-                    }) {
-                        *search_text = filtered_suggestions
-                            .get(*selected_suggestion)
-                            .unwrap()
-                            .1
-                            .to_string();
+                        if ctx.input_mut(|i| {
+                            i.key_pressed(egui::Key::Enter)
+                                || i.consume_key(egui::Modifiers::NONE, egui::Key::Tab)
+                        }) {
+                            *search_text = filtered_suggestions
+                                .get(*selected_suggestion)
+                                .unwrap()
+                                .1
+                                .to_string();
 
-                        next_state = Some(QassGui::Search {
-                            search_text: search_text.to_string(),
-                        });
+                            next_state = Some(QassGui::Search {
+                                search_text: search_text.to_string(),
+                            });
+                        }
                     }
                 }
                 QassGui::SearchError {
