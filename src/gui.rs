@@ -54,17 +54,16 @@ impl QassGui {
     }
 
     fn suggestions_state(search_text: String) -> QassGui {
-        if let Ok(state) = State::load() {
-            QassGui::SearchSuggestions {
+        match State::load() {
+            Ok(state) => QassGui::SearchSuggestions {
                 search_text,
                 selected_suggestion: 0,
                 suggestions: state.list(),
-            }
-        } else {
-            QassGui::SearchError {
+            },
+            Err(e) => QassGui::SearchError {
                 search_text,
-                error_msg: "Failed to load credentials.".to_string(),
-            }
+                error_msg: format!("Failed to load credentials: {}", e),
+            },
         }
     }
 }
