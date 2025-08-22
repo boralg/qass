@@ -85,21 +85,21 @@ impl QassGui {
             .collect()
     }
 
-    fn suggestions_state(search_text: String) -> QassGui {
+    fn suggestions_state(search_text: String) -> Self {
         match crate::api::State::load() {
             Ok(state) => {
                 let suggestions = state.list();
 
                 // TODO: do this repeatedly for more efficiency and less privacy?
                 let filtered_suggestions =
-                    QassGui::filtered_suggestions(search_text.clone(), &suggestions);
+                    Self::filtered_suggestions(search_text.clone(), &suggestions);
                 if filtered_suggestions.len() == 1 {
-                    return QassGui::Search {
+                    return Self::Search {
                         search_text: filtered_suggestions[0].1.to_owned(),
                     };
                 }
 
-                QassGui::SearchSuggestions {
+                Self::SearchSuggestions {
                     search_text,
                     selected_suggestion: 0,
                     prev_selected_suggestion: 0,
