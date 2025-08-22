@@ -128,7 +128,7 @@ fn type_password_text(password: &str) -> anyhow::Result<()> {
         let pressed_clone = pressed.clone();
 
         let event_handler = DeviceEventsHandler::new(Duration::from_millis(10))
-            .ok_or(anyhow::anyhow!("Could not initialize event loop"))?;
+            .ok_or(anyhow::anyhow!("Could not initialize device event loop"))?;
         let _keypress_guard = event_handler.on_key_up(move |keycode| {
             if matches!(keycode, Keycode::LControl | Keycode::RControl) {
                 pressed_clone.store(true, Ordering::SeqCst);
