@@ -117,7 +117,7 @@ fn type_password(service: String) -> anyhow::Result<()> {
     type_password_text(&password)
 }
 
-fn type_password_text(password: &str) -> anyhow::Result<()> {
+pub fn type_password_text(password: &str) -> anyhow::Result<()> {
     println!("Focus the target field and press CONTROL to type password (5s timeout)...");
 
     let start_time = Instant::now();

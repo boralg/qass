@@ -2,8 +2,7 @@ use std::collections::HashSet;
 
 use anyhow::anyhow;
 use eframe::egui::{self, Color32};
-
-use crate::api::State;
+use zeroize::Zeroizing;
 
 pub fn run() -> anyhow::Result<()> {
     let options = eframe::NativeOptions {
@@ -34,9 +33,13 @@ enum QassGui {
         prev_selected_suggestion: usize,
         suggestions: Vec<String>,
     },
-    SearchError {
+    Error {
         search_text: String,
         error_msg: String,
+    },
+    PasswordPrompt {
+        service_name: String,
+        password: String,
     },
 }
 
@@ -73,7 +76,7 @@ impl QassGui {
     }
 
     fn suggestions_state(search_text: String) -> QassGui {
-        match State::load() {
+        match crate::api::State::load() {
             Ok(state) => {
                 let suggestions = state.list();
 
@@ -93,7 +96,7 @@ impl QassGui {
                     suggestions,
                 }
             }
-            Err(e) => QassGui::SearchError {
+            Err(e) => QassGui::Error {
                 search_text,
                 error_msg: format!("Failed to load credentials: {}", e),
             },
@@ -120,6 +123,13 @@ impl eframe::App for QassGui {
 
                     if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Tab)) {
                         next_state = Some(QassGui::suggestions_state(search_text.clone()));
+                    }
+
+                    if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
+                        next_state = Some(QassGui::PasswordPrompt {
+                            service_name: search_text.clone(),
+                            password: String::new(),
+                        });
                     }
                 }
                 QassGui::SearchSuggestions {
@@ -156,7 +166,9 @@ impl eframe::App for QassGui {
 
                                     let response = ui.selectable_label(is_selected, &suggestion);
 
-                                    if is_selected && prev_selected_suggestion != selected_suggestion {
+                                    if is_selected
+                                        && prev_selected_suggestion != selected_suggestion
+                                    {
                                         // TODO: scrolling happens one frame late. when scrolling up, the highlight appears on the item one frame early
                                         response.scroll_to_me_animation(
                                             Some(egui::Align::Max),
@@ -177,7 +189,6 @@ impl eframe::App for QassGui {
                                 }
                             });
 
-                        
                         *prev_selected_suggestion = *selected_suggestion;
                         if ctx.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
                             *selected_suggestion += 1;
@@ -209,7 +220,42 @@ impl eframe::App for QassGui {
                         }
                     }
                 }
-                QassGui::SearchError {
+                QassGui::PasswordPrompt {
+                    service_name,
+                    password,
+                } => {
+                    let pwd_response = ui.add_sized(
+                        ui.available_size() * egui::vec2(1.0, 0.0),
+                        egui::TextEdit::singleline(password).password(true), // TODO: is this zeroizing?
+                    );
+                    pwd_response.request_focus();
+
+                    if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
+                        let pwd = crate::api::State::load().and_then(|s| {
+                            s.get(
+                                service_name.to_string(),
+                                Zeroizing::new(password.to_string()),
+                            )
+                        });
+                        match pwd {
+                            Ok(pwd) => {
+                                if let Err(e) = crate::type_password_text(&pwd) {
+                                    next_state = Some(QassGui::Error {
+                                        search_text: service_name.to_string(),
+                                        error_msg: format!("Failed to type password: {}", e),
+                                    });
+                                }
+                            }
+                            Err(e) => {
+                                next_state = Some(QassGui::Error {
+                                    search_text: service_name.to_string(),
+                                    error_msg: format!("Failed to decrypt: {}", e),
+                                });
+                            }
+                        };
+                    }
+                }
+                QassGui::Error {
                     search_text,
                     error_msg,
                 } => {
