@@ -1,4 +1,7 @@
-use std::collections::HashSet;
+use std::{
+    collections::HashSet,
+    time::{Duration, Instant},
+};
 
 use anyhow::anyhow;
 use eframe::egui::{self, Color32};
@@ -8,7 +11,8 @@ pub fn run() -> anyhow::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([400.0, 150.0])
-            .with_decorations(false),
+            .with_decorations(false)
+            .with_always_on_top(),
         ..Default::default()
     };
 
@@ -40,6 +44,12 @@ enum QassGui {
     PasswordPrompt {
         service_name: String,
         password: String,
+    },
+    PasswordType {
+        service_name: String,
+        password: Zeroizing<String>,
+        first_frame: Instant,
+        delay: Duration,
     },
 }
 
@@ -102,11 +112,36 @@ impl QassGui {
             },
         }
     }
+
+    fn password_type(service_name: String, password: Zeroizing<String>) -> Self {
+        Self::PasswordType {
+            service_name,
+            password,
+            first_frame: Instant::now(),
+            delay: Duration::from_secs_f32(0.1),
+        }
+    }
 }
 
 impl eframe::App for QassGui {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ctx, |ui| {
+        let panel_frame = match self {
+            QassGui::PasswordType { .. } => {
+                let mut frame = egui::Frame::default();
+                let original_color = frame.fill;
+                frame.fill = egui::Color32::from_rgba_premultiplied(
+                    original_color.r(),
+                    original_color.g(),
+                    original_color.b(),
+                    200,
+                );
+                frame
+            }
+            _ => egui::Frame::default(),
+        };
+
+        let panel = egui::CentralPanel::default().frame(panel_frame);
+        panel.show(ctx, |ui| {
             if ctx.input(|i| i.key_pressed(egui::Key::Escape)) {
                 std::process::exit(0);
             }
@@ -237,22 +272,45 @@ impl eframe::App for QassGui {
                                 Zeroizing::new(password.to_string()),
                             )
                         });
-                        match pwd {
-                            Ok(pwd) => {
-                                if let Err(e) = crate::type_password_text(&pwd) {
-                                    next_state = Some(QassGui::Error {
-                                        search_text: service_name.to_string(),
-                                        error_msg: format!("Failed to type password: {}", e),
-                                    });
-                                }
+
+                        next_state = Some(match pwd {
+                            Ok(password) => {
+                                QassGui::password_type(service_name.to_string(), password)
                             }
-                            Err(e) => {
-                                next_state = Some(QassGui::Error {
-                                    search_text: service_name.to_string(),
-                                    error_msg: format!("Failed to decrypt: {}", e),
-                                });
-                            }
-                        };
+                            Err(e) => QassGui::Error {
+                                search_text: service_name.to_string(),
+                                error_msg: format!("Failed to decrypt: {}", e),
+                            },
+                        });
+                    }
+                }
+                QassGui::PasswordType {
+                    service_name,
+                    password,
+                    first_frame,
+                    delay,
+                } => {
+                    ctx.send_viewport_cmd(egui::ViewportCommand::Transparent(true));
+                    ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(true));
+
+                    ui.label(
+                        "Focus the target field and press CONTROL to type password (5s timeout)...",
+                    );
+
+                    if first_frame.elapsed() > *delay {
+                        let typing = crate::type_password_text(&password);
+
+                        if let Err(e) = typing {
+                            ctx.send_viewport_cmd(egui::ViewportCommand::Transparent(false));
+                            ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(false));
+
+                            next_state = Some(QassGui::Error {
+                                search_text: service_name.to_string(),
+                                error_msg: format!("Failed to type password: {}", e),
+                            });
+                        } else {
+                            std::process::exit(0);
+                        }
                     }
                 }
                 QassGui::Error {
