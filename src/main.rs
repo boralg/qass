@@ -128,7 +128,7 @@ fn type_password_text(password: &str) -> anyhow::Result<()> {
         let pressed_clone = pressed.clone();
 
         let event_handler = DeviceEventsHandler::new(Duration::from_millis(10))
-            .expect("Could not initialize event loop");
+            .ok_or(anyhow::anyhow!("Could not initialize event loop"))?;
         let _keypress_guard = event_handler.on_key_up(move |keycode| {
             if matches!(keycode, Keycode::LControl | Keycode::RControl) {
                 pressed_clone.store(true, Ordering::SeqCst);
@@ -145,11 +145,7 @@ fn type_password_text(password: &str) -> anyhow::Result<()> {
     }
 
     if pressed.load(Ordering::SeqCst) {
-        let mut enigo = Enigo::new(&Settings::default()).expect("Could not create keypresses");
-
-        // enigo.key(enigo::Key::Backspace, enigo::Direction::Press)?;
-        // thread::sleep(Duration::from_millis(50));
-        // enigo.key(enigo::Key::Backspace, enigo::Direction::Release)?;
+        let mut enigo = Enigo::new(&Settings::default())?;
         enigo.text(password)?;
     }
 
