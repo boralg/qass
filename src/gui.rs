@@ -8,6 +8,8 @@ use eframe::egui;
 use enigo::{Enigo, Mouse, Settings};
 use zeroize::Zeroizing;
 
+use crate::gui_widget::PasswordEdit;
+
 pub fn run() -> anyhow::Result<()> {
     let cursor_pos = {
         let enigo = Enigo::new(&Settings::default())?;
@@ -53,7 +55,7 @@ enum QassGui {
     },
     PasswordPrompt {
         service_name: String,
-        password: String,
+        password: Zeroizing<String>,
     },
     PasswordTypingConfirmation {
         service_name: String,
@@ -175,7 +177,7 @@ impl eframe::App for QassGui {
                     if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
                         next_state = Some(QassGui::PasswordPrompt {
                             service_name: search_text.clone(),
-                            password: String::new(),
+                            password: String::new().into(),
                         });
                     }
                 }
@@ -271,13 +273,13 @@ impl eframe::App for QassGui {
                     service_name,
                     password,
                 } => {
-                    let pwd_response = ui.add_sized(
-                        ui.available_size() * egui::vec2(1.0, 0.0),
-                        egui::TextEdit::singleline(password)
-                            .hint_text("Password")
-                            .password(true), // TODO: is this zeroizing?
-                    );
+                    let pwd_response = ui.add(PasswordEdit::new(password));
                     pwd_response.request_focus();
+
+                    ui.colored_label(
+                        ui.visuals().strong_text_color(),
+                        "Enter password",
+                    );
 
                     if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
                         let pwd = crate::api::State::load().and_then(|s| {

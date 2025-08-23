@@ -18,6 +18,8 @@ pub mod api;
 pub mod crypto;
 #[cfg(feature = "gui")]
 pub mod gui;
+#[cfg(feature = "gui")]
+pub mod gui_widget;
 pub mod hidden;
 pub mod io;
 pub mod service;
