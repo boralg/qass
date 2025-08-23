@@ -142,12 +142,13 @@ qass gui
 ## Security Considerations
 
 - Master passwords are never stored.
-- Passwords are encrypted with AES-GCM-SIV.
-- Key derivation uses Argon2.
+- Passwords are encrypted with [AES-GCM-SIV](https://docs.rs/aes-gcm-siv/latest/aes_gcm_siv/).
+- Key derivation uses [Argon2](https://crates.io/crates/argon2).
+- Short passwords are padded to 32 bytes before encryption so the ciphertext doesn't expose their lengths.
 - Sensitive data is zeroed from memory when no longer needed.
 - All operations are performed locally.
 - The GUI exposes minimal information of the store during its operation.
 
 ## Contributing
 
-Contributions to `qass` are welcome! If you have suggestions, encounter issues, or want to contribute new features, please open an issue or submit a pull request.
+Contributions to `qass` are welcome! If you have suggestions, encounter issues/vulnerabilities, or want to contribute new features, please open an issue or submit a pull request.
