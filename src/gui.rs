@@ -15,6 +15,7 @@ pub fn run() -> anyhow::Result<()> {
         egui::pos2(x as f32, y as f32)
     };
 
+    // TODO: force x11
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([400.0, 150.0])
@@ -54,7 +55,7 @@ enum QassGui {
         service_name: String,
         password: String,
     },
-    PasswordType {
+    PasswordTypingConfirmation {
         service_name: String,
         password: Zeroizing<String>,
         first_frame: Instant,
@@ -123,7 +124,7 @@ impl QassGui {
     }
 
     fn password_type(service_name: String, password: Zeroizing<String>) -> Self {
-        Self::PasswordType {
+        Self::PasswordTypingConfirmation {
             service_name,
             password,
             first_frame: Instant::now(),
@@ -135,7 +136,9 @@ impl QassGui {
 impl eframe::App for QassGui {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let panel_frame = match self {
-            QassGui::PasswordType { .. } | QassGui::PasswordPrompt { .. } => egui::Frame::default(),
+            QassGui::PasswordPrompt { .. } | QassGui::PasswordTypingConfirmation { .. } => {
+                egui::Frame::default()
+            }
             _ => {
                 let mut frame = egui::Frame::default();
                 let original_color = frame.fill;
@@ -295,7 +298,7 @@ impl eframe::App for QassGui {
                         });
                     }
                 }
-                QassGui::PasswordType {
+                QassGui::PasswordTypingConfirmation {
                     service_name,
                     password,
                     first_frame,
