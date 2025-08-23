@@ -5,12 +5,20 @@ use std::{
 
 use anyhow::anyhow;
 use eframe::egui;
+use enigo::{Enigo, Mouse, Settings};
 use zeroize::Zeroizing;
 
 pub fn run() -> anyhow::Result<()> {
+    let cursor_pos = {
+        let enigo = Enigo::new(&Settings::default())?;
+        let (x, y) = enigo.location().unwrap_or((100, 100));
+        egui::pos2(x as f32, y as f32)
+    };
+
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([400.0, 150.0])
+            .with_position(cursor_pos)
             .with_decorations(false)
             .with_transparent(true)
             .with_always_on_top(),
