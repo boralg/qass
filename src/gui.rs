@@ -32,7 +32,7 @@ pub fn run() -> anyhow::Result<()> {
         search_text: String::new(),
     };
 
-    eframe::run_native("qass", options, Box::new(|cc| Ok(Box::new(state))))
+    eframe::run_native("qass", options, Box::new(|_cc| Ok(Box::new(state))))
         .map_err(|e| anyhow!("Failed to run qass GUI: {:?}", e))?;
 
     Ok(())
