@@ -4,7 +4,7 @@ use std::{
 };
 
 use anyhow::anyhow;
-use eframe::egui::{self, Color32};
+use eframe::egui;
 use zeroize::Zeroizing;
 
 pub fn run() -> anyhow::Result<()> {
@@ -12,6 +12,7 @@ pub fn run() -> anyhow::Result<()> {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([400.0, 150.0])
             .with_decorations(false)
+            .with_transparent(true)
             .with_always_on_top(),
         ..Default::default()
     };
@@ -126,18 +127,18 @@ impl QassGui {
 impl eframe::App for QassGui {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let panel_frame = match self {
-            QassGui::PasswordType { .. } => {
+            QassGui::PasswordType { .. } | QassGui::PasswordPrompt { .. } => egui::Frame::default(),
+            _ => {
                 let mut frame = egui::Frame::default();
                 let original_color = frame.fill;
                 frame.fill = egui::Color32::from_rgba_premultiplied(
                     original_color.r(),
                     original_color.g(),
                     original_color.b(),
-                    200,
+                    255,
                 );
                 frame
             }
-            _ => egui::Frame::default(),
         };
 
         let panel = egui::CentralPanel::default().frame(panel_frame);
@@ -261,7 +262,9 @@ impl eframe::App for QassGui {
                 } => {
                     let pwd_response = ui.add_sized(
                         ui.available_size() * egui::vec2(1.0, 0.0),
-                        egui::TextEdit::singleline(password).password(true), // TODO: is this zeroizing?
+                        egui::TextEdit::singleline(password)
+                            .hint_text("Password")
+                            .password(true), // TODO: is this zeroizing?
                     );
                     pwd_response.request_focus();
 
@@ -290,10 +293,9 @@ impl eframe::App for QassGui {
                     first_frame,
                     delay,
                 } => {
-                    ctx.send_viewport_cmd(egui::ViewportCommand::Transparent(true));
                     ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(true));
-
-                    ui.label(
+                    ui.colored_label(
+                        ui.visuals().strong_text_color(),
                         "Focus the target field and press CONTROL to type password (5s timeout)...",
                     );
 
@@ -301,9 +303,7 @@ impl eframe::App for QassGui {
                         let typing = crate::type_password_text(&password);
 
                         if let Err(e) = typing {
-                            ctx.send_viewport_cmd(egui::ViewportCommand::Transparent(false));
                             ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(false));
-
                             next_state = Some(QassGui::Error {
                                 search_text: service_name.to_string(),
                                 error_msg: format!("Failed to type password: {}", e),
@@ -324,7 +324,7 @@ impl eframe::App for QassGui {
                     search_response.request_focus();
 
                     ui.separator();
-                    ui.colored_label(Color32::YELLOW, error_msg);
+                    ui.colored_label(ui.visuals().warn_fg_color, error_msg);
 
                     if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Tab)) {
                         next_state = Some(QassGui::suggestions_state(search_text.clone()));
