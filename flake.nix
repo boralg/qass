@@ -22,6 +22,7 @@
               fenixPkgs: crossFenixPkgs: with fenixPkgs; [
                 latest.rustfmt
                 stable.rust-src
+                stable.cargo
               ];
           in
           [
