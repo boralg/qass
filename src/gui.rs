@@ -138,9 +138,7 @@ impl QassGui {
 impl eframe::App for QassGui {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let panel_frame = match self {
-            QassGui::PasswordPrompt { .. } | QassGui::PasswordTypingConfirmation { .. } => {
-                egui::Frame::default()
-            }
+            QassGui::PasswordTypingConfirmation { .. } => egui::Frame::default(),
             _ => {
                 let mut frame = egui::Frame::default();
                 let original_color = frame.fill;
@@ -166,7 +164,7 @@ impl eframe::App for QassGui {
                 QassGui::Search { search_text } => {
                     let search_response = ui.add_sized(
                         ui.available_size() * egui::vec2(1.0, 0.0),
-                        egui::TextEdit::singleline(search_text),
+                        egui::TextEdit::singleline(search_text).hint_text("Credential path"),
                     );
                     search_response.request_focus();
 
@@ -276,10 +274,7 @@ impl eframe::App for QassGui {
                     let pwd_response = ui.add(PasswordEdit::new(password));
                     pwd_response.request_focus();
 
-                    ui.colored_label(
-                        ui.visuals().strong_text_color(),
-                        "Enter password",
-                    );
+                    ui.colored_label(ui.visuals().strong_text_color(), "Enter password...");
 
                     if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
                         let pwd = crate::api::State::load().and_then(|s| {
