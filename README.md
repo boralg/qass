@@ -14,7 +14,7 @@
 
 - **CSV Import:** Import credentials from CSV files exported from browsers or other password managers.
 
-- **Offline:** Designed to work entirely offline, keeping your credentials under your control. The password store is a directory of two plain YAML files (user/password pairs + password salts) that can be trivially backed up.
+- **Offline:** Designed to work entirely offline, keeping your credentials under your control. The password store is a directory of plain YAML files that can be trivially backed up.
 
 - **Simple**: The CLI and internals are 744 lines of Rust in total, comparable to the well-known and loved [pass](https://git.zx2c4.com/password-store/about/). The GUI is another 384 lines of Rust. This simplicity enables thorough audits of the codebase in a short time. In fact, I implore users to do so before trusting any security-critical software of such impact.
 
@@ -24,6 +24,11 @@
 
 ```bash
 cargo install qass
+```
+
+Without GUI:
+```
+cargo install qass --features headless
 ```
 
 ### Prebuilt Binaries
@@ -54,9 +59,9 @@ nix build
 qass init
 ```
 
-This creates the `~/.qass` directory. The primary store is `credentials.yaml`. This can contain an arbitrarily nested tree of credentials. Leaves require a `username` and `password` field, but extra data can also be included. Paths down the tree are joined with `/` in the CLI and GUI.
+This creates the `~/.qass` directory. The primary store is `credentials.yaml`. This can contain arbitrarily nested trees of credentials. Leaves require a `username` and `password` field, but extra data can also be included. Paths down the tree are joined with `/` in the CLI and GUI.
 
-Each encrypted password has a salt associated in `salts.yaml`. [Hidden paths](#hiding-sensitive-credentials) are stored in `hidden.yaml`.
+Each encrypted password has a salt (and nonce) associated in `salts.yaml`. [Hidden paths](#hiding-sensitive-credentials) are stored in `hidden.yaml`.
 
 ### Add a New Credential
 
@@ -65,14 +70,14 @@ qass add github.com/myusername myusername
 # You'll be prompted for the password and master password
 ```
 
-### Type a Password
+### Retrieve and Type a Password
 
 ```bash
 qass type github.com/myusername
 # Enter master password, focus the target field, then press CONTROL (within a timeout interval) to type the password
 ```
 
-### List All Services
+### List All Credentials
 
 ```bash
 qass list
@@ -116,7 +121,7 @@ Encrypt cleartext credentials (e.g. after adding them by hand to `credentials.ya
 qass sync /
 ```
 
-Decrypt credentials for plaintext access:
+Decrypt credentials for cleartext access:
 
 ```bash
 qass unlock /
@@ -142,8 +147,9 @@ qass gui
 ## Security Considerations
 
 - Master passwords are never stored.
+- No permanent secret is derived from master passwords. Hence, different credentials can be encrypted with different master passwords, without external observers being able to tell.
 - Passwords are encrypted with [AES-GCM-SIV](https://docs.rs/aes-gcm-siv/latest/aes_gcm_siv/).
-- Key derivation uses [Argon2](https://crates.io/crates/argon2).
+- Key derivation uses [Argon2](https://docs.rs/argon2/latest/argon2).
 - Short passwords are padded to 32 bytes before encryption so the ciphertext doesn't expose their lengths.
 - Sensitive data is zeroed from memory when no longer needed.
 - All operations are performed locally.
@@ -151,4 +157,4 @@ qass gui
 
 ## Contributing
 
-Contributions to `qass` are welcome! If you have suggestions, encounter issues/vulnerabilities, or want to contribute new features, please open an issue or submit a pull request.
+Contributions to `qass` are welcome! If you have suggestions or encounter issues/vulnerabilities, please open an issue or submit a pull request. Feature requests will be considered, but I will be selective to maintain the project's simplicity and security.
