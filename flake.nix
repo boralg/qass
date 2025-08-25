@@ -21,8 +21,25 @@
             toolchainPackages =
               fenixPkgs: crossFenixPkgs: with fenixPkgs; [
                 latest.rustfmt
-                stable.rust-src
+                stable.rustc
                 stable.cargo
+                crossFenixPkgs.stable.rust-src
+                crossFenixPkgs.stable.rust-std
+              ];
+            libPath =
+              with pkgs;
+              lib.makeLibraryPath [
+                xdotool
+                libxkbcommon
+                wayland
+                xorg.libX11
+                xorg.libXrandr
+                xorg.libXrender
+                xorg.libXcursor
+                xorg.libxcb
+                xorg.libXi
+                libGL
+                vulkan-loader
               ];
           in
           [
@@ -36,12 +53,18 @@
                 xorg.libX11
                 xdotool
                 libxkbcommon
-
               ];
               postInstall = crateName: ''
-                  find $out -type f -exec sh -c '
+                find $out -type f -exec sh -c '
                   if file "$1" | grep -q "ELF .* executable"; then
                     patchelf --set-interpreter "/lib64/ld-linux-x86-64.so.2" "$1"
+                  fi
+                ' sh {} \;
+              '';
+              postInstallNixStore = crateName: ''
+                find $out -type f -exec sh -c '
+                  if file "$1" | grep -q "ELF .* executable"; then
+                    patchelf --set-rpath "${libPath}" "$1"
                   fi
                 ' sh {} \;
               '';
@@ -49,20 +72,8 @@
                 buildInputs = with pkgs; [
                   xdotool
                 ];
-                LD_LIBRARY_PATH =
-                  with pkgs;
-                  lib.makeLibraryPath [
-                    libxkbcommon
-                    wayland
-                    xorg.libX11
-                    xorg.libXrandr
-                    xorg.libXrender
-                    xorg.libXcursor
-                    xorg.libxcb
-                    xorg.libXi
-                    libGL
-                    vulkan-loader
-                  ];
+                LD_LIBRARY_PATH = libPath;
+                dontPatchELF = true; # do not compress RPATH since winit uses dlopen
               };
             }
           ];
