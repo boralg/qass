@@ -1,7 +1,7 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
-use crate::login::{SaltEntry, LoginEntry};
+use crate::login::{LoginEntry, SaltEntry};
 
 pub type HiddenMapIndex = IndexMap<String, HiddenMap>;
 
