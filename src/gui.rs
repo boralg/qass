@@ -331,7 +331,6 @@ impl eframe::App for QassGui {
                     );
                     search_response.request_focus();
 
-                    ui.separator();
                     ui.colored_label(ui.visuals().warn_fg_color, error_msg);
 
                     if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Tab)) {
