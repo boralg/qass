@@ -9,13 +9,13 @@ use crate::{
     crypto::{decrypt, derive_key, encrypt, generate_salt},
     hidden::{HiddenMap, HiddenMapIndex, UnsaltedHiddenMap},
     io::{config_dir, load_from_yaml, save_to_file},
-    service::{SaltEntry, ServiceEntry, ServiceMap, UnencryptedService},
+    login::{LoginEntry, LoginMap, SaltEntry, UnencryptedLogin},
 };
 
 pub struct State {
-    credentials: ServiceMap,
+    logins: LoginMap,
     salts: IndexMap<String, SaltEntry>,
-    hidden_credentials: HiddenMapIndex,
+    hidden_logins: HiddenMapIndex,
 }
 
 impl State {
@@ -25,47 +25,47 @@ impl State {
             bail!("Config not found. Run 'qass init' first");
         }
 
-        let credentials_path = dir.join("credentials.yml");
+        let logins_path = dir.join("logins.yml");
         let salts_path = dir.join("salts.yml");
         let hidden_path = dir.join("hidden.yml");
 
-        Ok((credentials_path, salts_path, hidden_path))
+        Ok((logins_path, salts_path, hidden_path))
     }
 
     pub fn load() -> anyhow::Result<State> {
-        let (credentials_path, salts_path, hidden_path) = State::paths()?;
+        let (logins_path, salts_path, hidden_path) = State::paths()?;
 
-        let credentials: ServiceMap = load_from_yaml(&credentials_path)?;
+        let logins: LoginMap = load_from_yaml(&logins_path)?;
         let salts: IndexMap<String, SaltEntry> = load_from_yaml(&salts_path)?;
-        let hidden_credentials: HiddenMapIndex = load_from_yaml(&hidden_path)?;
+        let hidden_logins: HiddenMapIndex = load_from_yaml(&hidden_path)?;
 
         Ok(State {
-            credentials,
+            logins,
             salts,
-            hidden_credentials,
+            hidden_logins,
         })
     }
 
     pub fn save(&self) -> anyhow::Result<()> {
-        let (credentials_path, salts_path, hidden_path) = State::paths()?;
+        let (logins_path, salts_path, hidden_path) = State::paths()?;
 
-        save_to_file(&credentials_path, &self.credentials)?;
+        save_to_file(&logins_path, &self.logins)?;
         save_to_file(&salts_path, &self.salts)?;
-        save_to_file(&hidden_path, &self.hidden_credentials)?;
+        save_to_file(&hidden_path, &self.hidden_logins)?;
 
         Ok(())
     }
 
     pub fn add(
         &mut self,
-        service: String,
+        login_name: String,
         username: String,
         password: Zeroizing<String>,
         master_password: Zeroizing<String>,
     ) -> anyhow::Result<()> {
         self.add_many(
-            vec![UnencryptedService {
-                service,
+            vec![UnencryptedLogin {
+                login_name,
                 username,
                 password,
                 extra_fields: IndexMap::new(),
@@ -76,30 +76,30 @@ impl State {
 
     pub fn add_many(
         &mut self,
-        services: Vec<UnencryptedService>,
+        logins: Vec<UnencryptedLogin>,
         master_password: Zeroizing<String>,
     ) -> anyhow::Result<()> {
-        for UnencryptedService {
-            service,
+        for UnencryptedLogin {
+            login_name,
             username,
             password,
             ..
-        } in services
+        } in logins
         {
             let salt = generate_salt();
             let key = derive_key(&master_password, &salt)?;
             let (nonce, ciphertext) = encrypt(&password, &key)?;
 
-            self.credentials.insert(
-                service.clone(),
-                ServiceEntry {
+            self.logins.insert(
+                login_name.clone(),
+                LoginEntry {
                     username,
                     password: b64.encode(ciphertext),
                     extra_fields: IndexMap::new(),
                 },
             );
             self.salts.insert(
-                service,
+                login_name,
                 SaltEntry {
                     nonce: b64.encode(nonce),
                     salt: salt,
@@ -112,33 +112,33 @@ impl State {
 
     pub fn get(
         &self,
-        service: String,
+        login_name: String,
         master_password: Zeroizing<String>,
     ) -> anyhow::Result<Zeroizing<String>> {
-        let service_entry = self
-            .credentials
-            .services
-            .get(&service)
-            .ok_or_else(|| anyhow!("Service '{}' not found in credentials", service))?;
+        let login_entry = self
+            .logins
+            .logins
+            .get(&login_name)
+            .ok_or_else(|| anyhow!("Path '{}' not found in logins", login_name))?;
         let salt_entry = self
             .salts
-            .get(&service)
-            .ok_or_else(|| anyhow!("Service '{}' not found in salts", service))?;
+            .get(&login_name)
+            .ok_or_else(|| anyhow!("Path '{}' not found in salts", login_name))?;
 
         let key = derive_key(&master_password, &salt_entry.salt)?;
 
-        let ciphertext = b64.decode(&service_entry.password)?;
+        let ciphertext = b64.decode(&login_entry.password)?;
         let nonce = b64.decode(&salt_entry.nonce)?;
 
         Ok(Zeroizing::new(decrypt(&ciphertext, &key, &nonce)?))
     }
 
     pub fn hide(&mut self, path: String, master_password: Zeroizing<String>) -> anyhow::Result<()> {
-        let credentials = std::mem::take(&mut self.credentials);
+        let logins = std::mem::take(&mut self.logins);
         let salts = std::mem::take(&mut self.salts);
 
         let (to_hide, rest): (Vec<(_, _)>, Vec<(_, _)>) =
-            credentials.services.into_iter().partition(|(k, _)| {
+            logins.logins.into_iter().partition(|(k, _)| {
                 path == "/"
                     || k.starts_with(&path)
                         && (k.len() == path.len() || k.chars().nth(path.len()).unwrap() == '/')
@@ -163,10 +163,10 @@ impl State {
         let key = derive_key(&master_password, &salt)?;
         let (nonce, ciphertext) = encrypt(&hidden_str, &key)?;
 
-        self.hidden_credentials.insert(
+        self.hidden_logins.insert(
             path,
             HiddenMap {
-                services: b64.encode(ciphertext),
+                logins: b64.encode(ciphertext),
                 salt: SaltEntry {
                     nonce: b64.encode(nonce),
                     salt,
@@ -174,24 +174,24 @@ impl State {
             },
         );
 
-        self.credentials = ServiceMap::from(rest);
+        self.logins = LoginMap::from(rest);
         self.salts = salts_rest;
 
         Ok(())
     }
 
     fn decrypt_hidden(
-        hidden_credentials: &HiddenMapIndex,
+        hidden_logins: &HiddenMapIndex,
         path: &String,
         master_password: &str,
     ) -> anyhow::Result<UnsaltedHiddenMap> {
-        let hidden_map = hidden_credentials
+        let hidden_map = hidden_logins
             .get(path)
             .ok_or_else(|| anyhow!("Path '{}' not found", path))?;
 
         let key = derive_key(&master_password, &hidden_map.salt.salt)?;
         let nonce = b64.decode(&hidden_map.salt.nonce)?;
-        let ciphertext = b64.decode(&hidden_map.services)?;
+        let ciphertext = b64.decode(&hidden_map.logins)?;
 
         let hidden_str = decrypt(&ciphertext, &key, &nonce)?;
         let hidden: UnsaltedHiddenMap = serde_yaml::from_str(&hidden_str)?;
@@ -204,14 +204,14 @@ impl State {
         path: String,
         master_password: Zeroizing<String>,
     ) -> anyhow::Result<()> {
-        let hidden = State::decrypt_hidden(&self.hidden_credentials, &path, &master_password)?;
+        let hidden = State::decrypt_hidden(&self.hidden_logins, &path, &master_password)?;
 
-        for (service_key, entry) in hidden.services {
-            self.credentials.insert(service_key.clone(), entry.service);
-            self.salts.insert(service_key, entry.salt);
+        for (login_key, entry) in hidden.logins {
+            self.logins.insert(login_key.clone(), entry.login);
+            self.salts.insert(login_key, entry.salt);
         }
 
-        self.hidden_credentials.shift_remove(&path);
+        self.hidden_logins.shift_remove(&path);
 
         Ok(())
     }
@@ -223,17 +223,17 @@ impl State {
         master_password: Zeroizing<String>,
     ) -> anyhow::Result<Zeroizing<String>> {
         let hidden = self
-            .hidden_credentials
+            .hidden_logins
             .keys()
             .filter(|p| path.starts_with(*p))
             .find_map(|p| {
-                let h = State::decrypt_hidden(&self.hidden_credentials, p, &master_password_unhide);
-                h.ok().and_then(|h| h.services.get(&path).cloned())
+                let h = State::decrypt_hidden(&self.hidden_logins, p, &master_password_unhide);
+                h.ok().and_then(|h| h.logins.get(&path).cloned())
             })
-            .ok_or_else(|| anyhow!("Service '{}' not found in credentials", path))?;
+            .ok_or_else(|| anyhow!("Path '{}' not found in logins", path))?;
 
         let key = derive_key(&master_password, &hidden.salt.salt)?;
-        let ciphertext = b64.decode(&hidden.service.password)?;
+        let ciphertext = b64.decode(&hidden.login.password)?;
         let nonce = b64.decode(&hidden.salt.nonce)?;
 
         Ok(Zeroizing::new(decrypt(&ciphertext, &key, &nonce)?))
@@ -262,7 +262,7 @@ impl State {
             .position(|h| h == "password")
             .ok_or_else(|| anyhow!("Missing 'password' column"))?;
 
-        let mut services = vec![];
+        let mut logins = vec![];
         for result in reader.records() {
             let record = result?;
 
@@ -277,42 +277,38 @@ impl State {
             let username = &record[username_idx];
             let password = &record[password_idx];
 
-            let mut service = url.to_string();
-            service.push('/');
-            service.push_str(username);
+            let mut login_name = url.to_string();
+            login_name.push('/');
+            login_name.push_str(username);
 
-            services.push(UnencryptedService {
-                service,
+            logins.push(UnencryptedLogin {
+                login_name,
                 username: username.to_string(),
                 password: Zeroizing::new(password.to_string()),
                 extra_fields: IndexMap::new(),
             });
         }
 
-        let count = services.len();
-        self.add_many(services, master_password)?;
+        let count = logins.len();
+        self.add_many(logins, master_password)?;
 
         Ok(count)
     }
 
     pub fn list(&self) -> Vec<String> {
-        let services: Vec<String> = self
-            .credentials
-            .services
+        let logins: Vec<String> = self
+            .logins
+            .logins
             .keys()
             .filter(|key| self.salts.contains_key(*key))
             .cloned()
             .collect();
 
-        services
+        logins
     }
 
-    pub fn unlock(
-        &mut self,
-        path: String,
-        master_password: Zeroizing<String>,
-    ) -> usize {
-        let services: Vec<String> = self
+    pub fn unlock(&mut self, path: String, master_password: Zeroizing<String>) -> usize {
+        let logins: Vec<String> = self
             .salts
             .keys()
             .cloned()
@@ -325,12 +321,12 @@ impl State {
 
         let mut unlocked_count = 0;
 
-        for service in services {
-            match self.get(service.clone(), master_password.clone()) {
+        for login in logins {
+            match self.get(login.clone(), master_password.clone()) {
                 Ok(cleartext) => {
-                    if let Some(entry) = self.credentials.services.get_mut(&service) {
+                    if let Some(entry) = self.logins.logins.get_mut(&login) {
                         entry.password = cleartext.to_string();
-                        self.salts.shift_remove(&service);
+                        self.salts.shift_remove(&login);
                         unlocked_count += 1;
                     }
                 }
@@ -348,12 +344,12 @@ impl State {
     ) -> anyhow::Result<usize> {
         self.salts = std::mem::take(&mut self.salts)
             .into_iter()
-            .filter(|(p, _)| self.credentials.services.contains_key(p))
+            .filter(|(p, _)| self.logins.logins.contains_key(p))
             .collect();
 
-        let to_add: Vec<UnencryptedService> = self
-            .credentials
-            .services
+        let to_add: Vec<UnencryptedLogin> = self
+            .logins
+            .logins
             .iter()
             .filter(|(p, _)| !self.salts.contains_key(*p))
             .filter(|(p, _)| {
@@ -361,8 +357,8 @@ impl State {
                     || p.starts_with(&path)
                         && (p.len() == path.len() || p.chars().nth(path.len()).unwrap() == '/')
             })
-            .map(|(p, s)| UnencryptedService {
-                service: p.to_owned(),
+            .map(|(p, s)| UnencryptedLogin {
+                login_name: p.to_owned(),
                 username: s.username.to_owned(),
                 password: Zeroizing::new(s.password.to_owned()),
                 extra_fields: s.extra_fields.to_owned(),

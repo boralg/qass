@@ -54,11 +54,11 @@ enum QassGui {
         error_msg: String,
     },
     PasswordPrompt {
-        service_name: String,
+        login_name: String,
         password: Zeroizing<String>,
     },
     PasswordTypingConfirmation {
-        service_name: String,
+        login_name: String,
         password: Zeroizing<String>,
         first_frame: Instant,
         delay: Duration,
@@ -120,14 +120,14 @@ impl QassGui {
             }
             Err(e) => QassGui::Error {
                 search_text,
-                error_msg: format!("Failed to load credentials: {}", e),
+                error_msg: format!("Failed to load logins: {}", e),
             },
         }
     }
 
-    fn password_type(service_name: String, password: Zeroizing<String>) -> Self {
+    fn password_type(login_name: String, password: Zeroizing<String>) -> Self {
         Self::PasswordTypingConfirmation {
-            service_name,
+            login_name,
             password,
             first_frame: Instant::now(),
             delay: Duration::from_secs_f32(0.1),
@@ -164,7 +164,7 @@ impl eframe::App for QassGui {
                 QassGui::Search { search_text } => {
                     let search_response = ui.add_sized(
                         ui.available_size() * egui::vec2(1.0, 0.0),
-                        egui::TextEdit::singleline(search_text).hint_text("Credential path"),
+                        egui::TextEdit::singleline(search_text).hint_text("Login path"),
                     );
                     search_response.request_focus();
 
@@ -174,7 +174,7 @@ impl eframe::App for QassGui {
 
                     if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
                         next_state = Some(QassGui::PasswordPrompt {
-                            service_name: search_text.clone(),
+                            login_name: search_text.clone(),
                             password: String::new().into(),
                         });
                     }
@@ -268,7 +268,7 @@ impl eframe::App for QassGui {
                     }
                 }
                 QassGui::PasswordPrompt {
-                    service_name,
+                    login_name,
                     password,
                 } => {
                     let pwd_response = ui.add(PasswordEdit::new(password));
@@ -278,25 +278,22 @@ impl eframe::App for QassGui {
 
                     if ctx.input(|i| i.key_pressed(egui::Key::Enter)) {
                         let pwd = crate::api::State::load().and_then(|s| {
-                            s.get(
-                                service_name.to_string(),
-                                Zeroizing::new(password.to_string()),
-                            )
+                            s.get(login_name.to_string(), Zeroizing::new(password.to_string()))
                         });
 
                         next_state = Some(match pwd {
                             Ok(password) => {
-                                QassGui::password_type(service_name.to_string(), password)
+                                QassGui::password_type(login_name.to_string(), password)
                             }
                             Err(e) => QassGui::Error {
-                                search_text: service_name.to_string(),
+                                search_text: login_name.to_string(),
                                 error_msg: format!("Failed to decrypt: {}", e),
                             },
                         });
                     }
                 }
                 QassGui::PasswordTypingConfirmation {
-                    service_name,
+                    login_name,
                     password,
                     first_frame,
                     delay,
@@ -313,7 +310,7 @@ impl eframe::App for QassGui {
                         if let Err(e) = typing {
                             ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(false));
                             next_state = Some(QassGui::Error {
-                                search_text: service_name.to_string(),
+                                search_text: login_name.to_string(),
                                 error_msg: format!("Failed to type password: {}", e),
                             });
                         } else {

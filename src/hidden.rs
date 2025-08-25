@@ -1,13 +1,13 @@
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
-use crate::service::{SaltEntry, ServiceEntry};
+use crate::login::{SaltEntry, LoginEntry};
 
 pub type HiddenMapIndex = IndexMap<String, HiddenMap>;
 
 #[derive(Serialize, Deserialize)]
 pub struct HiddenMap {
-    pub services: EncryptedHiddenMap,
+    pub logins: EncryptedHiddenMap,
     pub salt: SaltEntry,
 }
 
@@ -15,28 +15,28 @@ type EncryptedHiddenMap = String;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct UnsaltedHiddenMap {
-    pub services: IndexMap<String, HiddenEntry>,
+    pub logins: IndexMap<String, HiddenEntry>,
 }
 
 impl UnsaltedHiddenMap {
     pub fn new() -> Self {
         Self {
-            services: IndexMap::new(),
+            logins: IndexMap::new(),
         }
     }
 
     pub fn insert(
         &mut self,
         key: String,
-        service: ServiceEntry,
+        login: LoginEntry,
         salt: SaltEntry,
     ) -> Option<HiddenEntry> {
-        self.services.insert(key, HiddenEntry { service, salt })
+        self.logins.insert(key, HiddenEntry { login, salt })
     }
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct HiddenEntry {
-    pub service: ServiceEntry,
+    pub login: LoginEntry,
     pub salt: SaltEntry,
 }

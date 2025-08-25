@@ -9,63 +9,63 @@ pub struct SaltEntry {
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
-pub struct ServiceEntry {
+pub struct LoginEntry {
     pub username: String,
     pub password: String,
     #[serde(flatten)]
     pub extra_fields: IndexMap<String, String>,
 }
 
-pub struct UnencryptedService {
-    pub service: String,
+pub struct UnencryptedLogin {
+    pub login_name: String,
     pub username: String,
     pub password: Zeroizing<String>,
     pub extra_fields: IndexMap<String, String>,
 }
 
 #[derive(Default)]
-pub struct ServiceMap {
-    pub services: IndexMap<String, ServiceEntry>,
+pub struct LoginMap {
+    pub logins: IndexMap<String, LoginEntry>,
 }
 
-impl ServiceMap {
+impl LoginMap {
     pub fn new() -> Self {
-        ServiceMap {
-            services: IndexMap::new(),
+        LoginMap {
+            logins: IndexMap::new(),
         }
     }
 
-    pub fn insert(&mut self, key: String, value: ServiceEntry) -> Option<ServiceEntry> {
-        self.services.insert(key, value)
+    pub fn insert(&mut self, key: String, value: LoginEntry) -> Option<LoginEntry> {
+        self.logins.insert(key, value)
     }
 }
 
-impl From<IndexMap<String, ServiceEntry>> for ServiceMap {
-    fn from(value: IndexMap<String, ServiceEntry>) -> Self {
-        ServiceMap { services: value }
+impl From<IndexMap<String, LoginEntry>> for LoginMap {
+    fn from(value: IndexMap<String, LoginEntry>) -> Self {
+        LoginMap { logins: value }
     }
 }
 
-impl Serialize for ServiceMap {
+impl Serialize for LoginMap {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        NestedMap::from_entries(&self.services).serialize(serializer)
+        NestedMap::from_entries(&self.logins).serialize(serializer)
     }
 }
 
-impl<'de> Deserialize<'de> for ServiceMap {
+impl<'de> Deserialize<'de> for LoginMap {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         let nested = NestedMap::deserialize(deserializer)?;
 
-        let mut service_map = ServiceMap::new();
-        nested.extract_entries("", &mut service_map);
+        let mut login_map = LoginMap::new();
+        nested.extract_entries("", &mut login_map);
 
-        Ok(service_map)
+        Ok(login_map)
     }
 }
 
@@ -73,11 +73,11 @@ impl<'de> Deserialize<'de> for ServiceMap {
 #[serde(untagged)]
 pub enum NestedMap {
     Map(IndexMap<String, Box<NestedMap>>),
-    Leaf(ServiceEntry),
+    Leaf(LoginEntry),
 }
 
 impl NestedMap {
-    pub fn from_entries(entries: &IndexMap<String, ServiceEntry>) -> Self {
+    pub fn from_entries(entries: &IndexMap<String, LoginEntry>) -> Self {
         let mut root = NestedMap::Map(IndexMap::new());
 
         for (path, entry) in entries {
@@ -88,10 +88,10 @@ impl NestedMap {
         root
     }
 
-    pub fn extract_entries(&self, prefix: &str, map: &mut ServiceMap) {
+    pub fn extract_entries(&self, prefix: &str, map: &mut LoginMap) {
         match self {
             NestedMap::Leaf(entry) => {
-                map.services.insert(prefix.to_string(), entry.clone());
+                map.logins.insert(prefix.to_string(), entry.clone());
             }
             NestedMap::Map(children) => {
                 for (key, child) in children {
@@ -107,7 +107,7 @@ impl NestedMap {
     }
 }
 
-fn insert_at_path(node: &mut NestedMap, segments: &[&str], entry: ServiceEntry) {
+fn insert_at_path(node: &mut NestedMap, segments: &[&str], entry: LoginEntry) {
     if segments.is_empty() {
         panic!("Path must not be empty.");
     }
@@ -129,7 +129,7 @@ fn insert_at_path(node: &mut NestedMap, segments: &[&str], entry: ServiceEntry) 
             }
         }
         NestedMap::Leaf(_) => {
-            panic!("Cannot insert to this path, as it is not a list. Turn it into a list by naming the current entry in the store.")
+            panic!("Cannot insert to this path, as it is a login, not a collection. Turn it into a collection by making a new layer and naming it.")
         }
     }
 }

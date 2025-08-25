@@ -22,7 +22,7 @@ pub mod gui;
 pub mod gui_widget;
 pub mod hidden;
 pub mod io;
-pub mod service;
+pub mod login;
 
 #[derive(Parser)]
 #[command(name = "qass")]
@@ -36,11 +36,11 @@ struct Cli {
 enum Commands {
     Init,
     Add {
-        service: String,
+        login: String,
         username: String,
     },
     Type {
-        service: String,
+        login: String,
     },
     Hide {
         path: String,
@@ -49,7 +49,7 @@ enum Commands {
         path: String,
     },
     TypeHidden {
-        service: String,
+        login: String,
     },
     Import {
         path: String,
@@ -71,13 +71,13 @@ fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Init => init(),
-        Commands::Add { service, username } => add(service, username),
-        Commands::Type { service } => type_password(service),
+        Commands::Add { login, username } => add(login, username),
+        Commands::Type { login } => type_password(login),
         Commands::Hide { path } => hide(path),
         Commands::Unhide { path } => unhide(path),
-        Commands::TypeHidden { service } => type_hidden_password(service),
+        Commands::TypeHidden { login } => type_hidden_password(login),
         Commands::Import { path } => import_csv(path),
-        Commands::List => list_services(),
+        Commands::List => list_logins(),
         Commands::Unlock { path } => unlock(path),
         Commands::Sync { path } => sync(path),
         #[cfg(feature = "gui")]
@@ -90,7 +90,7 @@ fn init() -> anyhow::Result<()> {
     let dir = io::config_dir()?;
     fs::create_dir_all(&dir)?;
 
-    for file in &["credentials.yml", "salts.yml", "hidden.yml"] {
+    for file in &["logins.yml", "salts.yml", "hidden.yml"] {
         let path = dir.join(file);
         if !path.exists() {
             File::create(path)?;
@@ -100,21 +100,21 @@ fn init() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn add(service: String, username: String) -> anyhow::Result<()> {
+fn add(login: String, username: String) -> anyhow::Result<()> {
     let mut state = State::load()?;
 
     let password = Zeroizing::new(rpassword::prompt_password("Password: ")?);
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
 
-    state.add(service, username, password, master_pwd)?;
+    state.add(login, username, password, master_pwd)?;
     state.save()
 }
 
-fn type_password(service: String) -> anyhow::Result<()> {
+fn type_password(login: String) -> anyhow::Result<()> {
     let state = State::load()?;
 
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
-    let password = state.get(service, master_pwd)?;
+    let password = state.get(login, master_pwd)?;
 
     type_password_text(&password)
 }
@@ -172,13 +172,13 @@ fn unhide(path: String) -> anyhow::Result<()> {
     state.save()
 }
 
-fn type_hidden_password(service: String) -> anyhow::Result<()> {
+fn type_hidden_password(login: String) -> anyhow::Result<()> {
     let state = State::load()?;
 
     let master_pwd_unhide =
         Zeroizing::new(rpassword::prompt_password("Master Password (Unhide): ")?);
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
-    let password = state.get_hidden(service, master_pwd_unhide, master_pwd)?;
+    let password = state.get_hidden(login, master_pwd_unhide, master_pwd)?;
 
     type_password_text(&password)?;
 
@@ -190,18 +190,18 @@ fn import_csv(path: String) -> anyhow::Result<()> {
 
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
 
-    println!("Importing services...");
+    println!("Importing logins...");
 
     // TODO: progress bar
     let count = state.import_csv(path, master_pwd)?;
     state.save()?;
 
-    println!("Successfully imported {} services", count);
+    println!("Successfully imported {} logins", count);
 
     Ok(())
 }
 
-fn list_services() -> anyhow::Result<()> {
+fn list_logins() -> anyhow::Result<()> {
     let state = State::load()?;
 
     for path in state.list() {
