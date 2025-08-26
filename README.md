@@ -16,7 +16,7 @@
 
 - **Offline:** Designed to work entirely offline, keeping your logins under your control. The password store is a directory of plain YAML files that can be trivially backed up.
 
-- **Simple**: The CLI and internals are 740 lines of Rust in total, comparable to the well-known and loved [pass](https://git.zx2c4.com/password-store/about/). The GUI is another 344 lines of Rust. This simplicity enables thorough audits of the codebase in a short time. In fact, I implore users to do so before trusting any security-critical software of such impact.
+- **Simple**: The CLI and internals are 740 lines of Rust in total, comparable to the well-known and loved [pass](https://git.zx2c4.com/password-store/about/). The GUI is another 360 lines of Rust. This simplicity enables thorough audits of the codebase in a short time. In fact, I implore users to do so before trusting any security-critical software of such impact.
 
 ## Installation
 
