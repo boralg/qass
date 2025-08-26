@@ -4,7 +4,10 @@ use std::{
 };
 
 use anyhow::anyhow;
-use eframe::egui;
+use eframe::egui::{
+    self,
+    text::{CCursor, CCursorRange},
+};
 use enigo::{Enigo, Mouse, Settings};
 use zeroize::Zeroizing;
 
@@ -28,9 +31,7 @@ pub fn run() -> anyhow::Result<()> {
         ..Default::default()
     };
 
-    let state = QassGui::Search {
-        search_text: String::new(),
-    };
+    let state = QassGui::search(String::new());
 
     eframe::run_native("qass", options, Box::new(|_cc| Ok(Box::new(state))))
         .map_err(|e| anyhow!("Failed to run qass GUI: {:?}", e))?;
@@ -42,6 +43,7 @@ pub fn run() -> anyhow::Result<()> {
 enum QassGui {
     Search {
         search_text: String,
+        refocused: bool,
     },
     SearchSuggestions {
         search_text: String,
@@ -66,6 +68,13 @@ enum QassGui {
 }
 
 impl QassGui {
+    fn search(search_text: String) -> Self {
+        Self::Search {
+            search_text: search_text,
+            refocused: false,
+        }
+    }
+
     fn filtered_suggestions<'a>(
         search_text: String,
         suggestions: &'a Vec<String>,
@@ -106,9 +115,7 @@ impl QassGui {
                 let filtered_suggestions =
                     Self::filtered_suggestions(search_text.clone(), &suggestions);
                 if filtered_suggestions.len() == 1 {
-                    return Self::Search {
-                        search_text: filtered_suggestions[0].1.to_owned(),
-                    };
+                    return QassGui::search(filtered_suggestions[0].1.to_owned());
                 }
 
                 Self::SearchSuggestions {
@@ -161,12 +168,27 @@ impl eframe::App for QassGui {
             let mut next_state = None;
 
             match self {
-                QassGui::Search { search_text } => {
+                QassGui::Search {
+                    search_text,
+                    refocused,
+                } => {
                     let search_response = ui.add_sized(
                         ui.available_size() * egui::vec2(1.0, 0.0),
                         egui::TextEdit::singleline(search_text).hint_text("Login path"),
                     );
                     search_response.request_focus();
+
+                    if !*refocused {
+                        if let Some(mut state) = egui::TextEdit::load_state(ctx, search_response.id)
+                        {
+                            let ccursor = CCursor::new(search_text.len());
+                            state
+                                .cursor
+                                .set_char_range(Some(CCursorRange::one(ccursor)));
+                            state.store(ctx, search_response.id);
+                        }
+                        *refocused = true;
+                    }
 
                     if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Tab)) {
                         next_state = Some(QassGui::suggestions_state(search_text.clone()));
@@ -225,9 +247,7 @@ impl eframe::App for QassGui {
 
                                     if response.clicked() {
                                         *search_text = suggestion;
-                                        next_state = Some(QassGui::Search {
-                                            search_text: search_text.to_string(),
-                                        });
+                                        next_state = Some(QassGui::search(search_text.to_string()));
                                     }
 
                                     if response.hovered() {
@@ -261,9 +281,7 @@ impl eframe::App for QassGui {
                                 .1
                                 .to_string();
 
-                            next_state = Some(QassGui::Search {
-                                search_text: search_text.to_string(),
-                            });
+                            next_state = Some(QassGui::search(search_text.to_string()));
                         }
                     }
                 }
