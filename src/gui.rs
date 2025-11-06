@@ -347,6 +347,7 @@ impl eframe::App for QassGui {
                     search_response.request_focus();
 
                     ui.colored_label(ui.visuals().warn_fg_color, error_msg);
+                    ui.colored_label(ui.visuals().warn_fg_color, "Press Tab to continue.");
 
                     if ctx.input_mut(|i| i.consume_key(egui::Modifiers::NONE, egui::Key::Tab)) {
                         next_state = Some(QassGui::search(search_text.clone()));
