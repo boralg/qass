@@ -59,14 +59,12 @@ impl State {
     pub fn add(
         &mut self,
         login_name: String,
-        username: String,
         password: Zeroizing<String>,
         master_password: Zeroizing<String>,
     ) -> anyhow::Result<()> {
         self.add_many(
             vec![UnencryptedLogin {
                 login_name,
-                username,
                 password,
                 extra_fields: IndexMap::new(),
             }],
@@ -81,7 +79,6 @@ impl State {
     ) -> anyhow::Result<()> {
         for UnencryptedLogin {
             login_name,
-            username,
             password,
             ..
         } in logins
@@ -93,7 +90,6 @@ impl State {
             self.logins.insert(
                 login_name.clone(),
                 LoginEntry {
-                    username,
                     password: b64.encode(ciphertext),
                     extra_fields: IndexMap::new(),
                 },
@@ -283,7 +279,6 @@ impl State {
 
             logins.push(UnencryptedLogin {
                 login_name,
-                username: username.to_string(),
                 password: Zeroizing::new(password.to_string()),
                 extra_fields: IndexMap::new(),
             });
@@ -359,7 +354,6 @@ impl State {
             })
             .map(|(p, s)| UnencryptedLogin {
                 login_name: p.to_owned(),
-                username: s.username.to_owned(),
                 password: Zeroizing::new(s.password.to_owned()),
                 extra_fields: s.extra_fields.to_owned(),
             })

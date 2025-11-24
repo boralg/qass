@@ -59,21 +59,21 @@ nix build
 qass init
 ```
 
-This creates the `~/.qass` directory. The primary store is `logins.yaml`. This can contain arbitrarily nested trees of login data. Leaves require a `username` and `password` field, but extra data can also be included. Paths down the tree are joined with `/` in the CLI and GUI.
+This creates the `~/.qass` directory. The primary store is `logins.yaml`. This can contain arbitrarily nested trees of login data. Leaves require a `password` field, but extra data can also be included. Paths down the tree are joined with `/` in the CLI and GUI.
 
 Each encrypted password has a salt (and nonce) associated in `salts.yaml`. [Hidden paths](#hiding-sensitive-logins) are stored in `hidden.yaml`.
 
 ### Add a New Login
 
 ```bash
-qass add github.com/myusername myusername
+qass add github.com/username
 # You'll be prompted for the password and master password
 ```
 
 ### Retrieve and Type a Password
 
 ```bash
-qass type github.com/myusername
+qass type github.com/username
 # Enter master password, focus the target field, then press CONTROL (within a timeout interval) to type the password
 ```
 

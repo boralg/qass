@@ -10,7 +10,6 @@ pub struct SaltEntry {
 
 #[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct LoginEntry {
-    pub username: String,
     pub password: String,
     #[serde(flatten)]
     pub extra_fields: IndexMap<String, String>,
@@ -18,7 +17,6 @@ pub struct LoginEntry {
 
 pub struct UnencryptedLogin {
     pub login_name: String,
-    pub username: String,
     pub password: Zeroizing<String>,
     pub extra_fields: IndexMap<String, String>,
 }

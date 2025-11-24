@@ -37,7 +37,6 @@ enum Commands {
     Init,
     Add {
         login: String,
-        username: String,
     },
     Type {
         login: String,
@@ -71,7 +70,7 @@ fn main() -> anyhow::Result<()> {
 
     match cli.command {
         Commands::Init => init(),
-        Commands::Add { login, username } => add(login, username),
+        Commands::Add { login } => add(login),
         Commands::Type { login } => type_password(login),
         Commands::Hide { path } => hide(path),
         Commands::Unhide { path } => unhide(path),
@@ -100,13 +99,13 @@ fn init() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn add(login: String, username: String) -> anyhow::Result<()> {
+fn add(login: String) -> anyhow::Result<()> {
     let mut state = State::load()?;
 
     let password = Zeroizing::new(rpassword::prompt_password("Password: ")?);
     let master_pwd = Zeroizing::new(rpassword::prompt_password("Master Password: ")?);
 
-    state.add(login, username, password, master_pwd)?;
+    state.add(login, password, master_pwd)?;
     state.save()
 }
 
