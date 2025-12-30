@@ -76,6 +76,24 @@
                 dontPatchELF = true; # do not compress RPATH since winit uses dlopen
               };
             }
+            {
+              system = "x86_64-pc-windows-gnu";
+              arch = "x86_64-windows";
+              inherit toolchainPackages;
+              depsBuild = with pkgs.pkgsCross; [
+                mingwW64.stdenv.cc
+                mingwW64.windows.pthreads
+              ];
+              env = {
+                # fixes issues related to libring
+                TARGET_CC = with pkgs.pkgsCross; "${mingwW64.stdenv.cc}/bin/${mingwW64.stdenv.cc.targetPrefix}cc";
+
+                #fixes issues related to openssl
+                OPENSSL_DIR = "${pkgs.openssl.dev}";
+                OPENSSL_LIB_DIR = "${pkgs.openssl.out}/lib";
+                OPENSSL_INCLUDE_DIR = "${pkgs.openssl.dev}/include/";
+              };
+            }
           ];
         tomersLib = tomers.libFor system targetPlatforms;
       in
