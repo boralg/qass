@@ -49,6 +49,7 @@
               inherit toolchainPackages;
               depsBuild = with pkgs; [
                 patchelf
+                makeWrapper
                 pkg-config
                 xorg.libX11
                 xdotool
@@ -67,12 +68,15 @@
                     patchelf --set-rpath "${libPath}" "$1"
                   fi
                 ' sh {} \;
+                wrapProgram $out/bin/${crateName} \
+                  --set __EGL_VENDOR_LIBRARY_DIRS "${pkgs.mesa}/share/glvnd/egl_vendor.d"
               '';
               env = {
                 buildInputs = with pkgs; [
                   xdotool
                 ];
                 LD_LIBRARY_PATH = libPath;
+                __EGL_VENDOR_LIBRARY_DIRS = "${pkgs.mesa}/share/glvnd/egl_vendor.d";
                 dontPatchELF = true; # do not compress RPATH since winit uses dlopen
               };
             }
